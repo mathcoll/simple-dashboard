@@ -731,20 +731,31 @@ h1, h2, h3, h4, h5, p {
 }
 h1.value span,
 h2.value span {
-	font-size: 32px;
+	font-size: 28px;
 	text-transform: none;
 	vertical-align: super;
 }
-h3.value span,
-h4.value span,
-h5.value span {
+
+h3.value span {
 	font-size: 12px;
 	text-transform: none;
 	vertical-align: super;
 }
 
+h4.value span {
+	font-size: 8px;
+	text-transform: none;
+	vertical-align: super;
+}
+
+h5.value span {
+	font-size: 5px;
+	text-transform: none;
+	vertical-align: super;
+}
+
 h1 {
-    color: rgba(255, 255, 255, 0.698);
+    color: rgba(255, 255, 255, 0.7);
     background: rgba(128, 128, 128, 0.3);
     font-size: 20px;
     font-weight: 400;

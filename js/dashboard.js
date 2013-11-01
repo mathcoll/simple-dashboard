@@ -10,15 +10,16 @@ $(function(){
 		helper: 'clone',
 		resize: {
 			enabled: true,
-			max_size: [3, 3]
+			max_size: [4, 4]
 		}
 	}).data('gridster');
 	
 	$.fn.peity.defaults.pie = {
-		colours: ["#ff9900", "#fff4dd", "#ffd592", "#c6d9fd", "#4d89f9"],
+		colours: ["#cecece", "#fff4dd", "#ffd592", "#c6d9fd", "#4d89f9"],
 		spacing: devicePixelRatio || 1,
 		strokeWidth: 1
 	}
+	//$.fn.peity.defaults.bar = {}
 
 	currentVOC();
 	VOCs();
@@ -34,7 +35,7 @@ function currentVOC() {
 	$.getJSON("http://app.internetcollaboratif.info/API/?action=getVOC&serial=YVOCMK01-09DE3", function(getVOC) {
 		$("li.currentVOC h1, li.currentVOC h2, li.currentVOC div, li.currentVOC p").remove();
 		$("li.currentVOC").append("<h1>Current VOC</h1>");
-		$("li.currentVOC").append("<input class='knobCurrentVOC' data-min='"+getVOC['getVOC']['lowestValue']+"' data-max='"+getVOC['getVOC']['highestValue']+"' data-width='150' data-height='170' data-fgColor='#fff' data-thickness='.4' data-readOnly='true' value='"+getVOC['getVOC']['currentValue']+"' />");
+		$("li.currentVOC").append("<input class='knobCurrentVOC' data-min='"+getVOC['getVOC']['lowestValue']+"' data-max='"+getVOC['getVOC']['highestValue']+"' data-width='170' data-height='190' data-angleOffset='-150' data-angleArc='300' data-fgColor='#cecece' data-thickness='.4' data-readOnly='true' value='"+getVOC['getVOC']['currentValue']+"' />");
 		$("li.currentVOC").append("<h2>ppm</h2>");
 		$("li.currentVOC").append("<p class='details'>min: "+getVOC['getVOC']['lowestValue']+" / max: "+getVOC['getVOC']['highestValue']+"</p>");
 		$("li.currentVOC").append("<p class='updated-at'>"+displayTime()+"</p>");
@@ -44,8 +45,8 @@ function currentVOC() {
 }
 function VOCs() {
 	$.getJSON("http://app.internetcollaboratif.info/API/?action=getData&flow_id=5&since=1h", function(getVOCs) {
-		$("li.VOCs h1, li.VOCs h2, li.VOCs div, li.VOCs p").remove();
-		$("li.VOCs").append("<h1>Yocto VOC Module (ppm)</h1>");
+		$("li.VOCs h1, li.VOCs h2, li.VOCs h3, li.VOCs h4, li.VOCs h5, li.VOCs div, li.VOCs p").remove();
+		$("li.VOCs").append("<h1>Yocto VOC Module</h1>");
 		var n=2;
 		getVOCs = getVOCs.getData;
 		//console.log(getVOCs);
@@ -61,7 +62,7 @@ function guruplugMemory() {
 		getMemory = getMemory.getData;
 		$("li.guruplugMemory h1, li.guruplugMemory h2, li.guruplugMemory div, li.guruplugMemory p").remove();
 		$("li.guruplugMemory").append("<h1>GuruPlug Memory Usage</h1>");
-		$("li.guruplugMemory").append("<input class='knobMemory' data-min='0' data-max='100' data-width='160' data-fgColor='#fff' data-angleOffset='-125' data-angleArc='250' data-thickness='.4' data-readOnly='true' value='"+getMemory[0][1]+"' />");
+		$("li.guruplugMemory").append("<input class='knobMemory' data-min='0' data-max='120' data-width='180' data-fgColor='#cecece' data-angleOffset='-150' data-angleArc='300' data-thickness='.4' data-readOnly='true' value='"+getMemory[0][1]+"' />");
 		$("li.guruplugMemory").append("<h2>%</h2>");
 		$("li.guruplugMemory").append("<p class='updated-at'>"+displayTime(parseInt(getMemory[0][0]))+"</p>");
 		$(".knobMemory").knob({});
@@ -85,15 +86,21 @@ function guruplugRootAccess() {
 		getFailedRoot = getFailedRoot.getData;
 		$("li.guruplugRootAccess h1, li.guruplugRootAccess h2, li.guruplugRootAccess div, li.guruplugRootAccess p").remove();
 		$("li.guruplugRootAccess").append("<h1>Failed Root Access</h1>");
-		$("li.guruplugRootAccess").append("<h2>List 20 last days</h2>");
+		$("li.guruplugRootAccess").append("<h2>Number of Failed Root Attempts, last 20 days</h2>");
 		var rootAccess = "";
 		$.each(getFailedRoot, function(key, value){
 			rootAccess += getFailedRoot[key][1] + ",";
 		});
 		$("li.guruplugRootAccess").append("<span class='bar'>"+rootAccess.substring(0, (rootAccess.length)-1)+"</span></h3>");
-		$("li.guruplugRootAccess").append("<h2>Number of Failed Root Attempts</h2>");
 		$("li.guruplugRootAccess").append("<p class='updated-at'></p>");
-		$(".bar").peity("bar", { width: 2*(dim-margin), height: dim-110, spacing: margin, colour: "#ff9900", strokeColour: "#ffd592" });
+		$("li.guruplugRootAccess span.bar").peity("bar", {
+			width: 2*(dim-margin),
+			height: dim-90,
+			spacing: margin,
+			colours: ["#cecece"],
+			strokeColour: "#ffd592",
+			strokeWidth: 1
+		});
 	});
 	setTimeout("guruplugRootAccess()", 24*60*60000);
 }
