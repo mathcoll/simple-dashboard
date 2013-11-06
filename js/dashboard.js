@@ -2,6 +2,9 @@ var margin = 7;
 var cols = 4;
 var dim = Math.round((($(window).width()/cols)-((cols-1)*margin)));
 var gridster;
+var days = new Array("D", "L", "M", "M", "J", "V", "S");
+var months = new Array("Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre");
+var s_months = new Array("Jan.", "Fév.", "Mar.", "Avr.", "Mai", "Jui.", "Juil.", "Aoû.", "Sept.", "Oct.", "Nov.", "Déc.");
 
 $(function(){
 	gridster = $(".gridster > ul").gridster({
@@ -28,6 +31,7 @@ $(function(){
 	guruplugSpace();
 	guruplugEatingCPU();
 	guruplugEvents();
+	horloge();
 });
 
 
@@ -83,19 +87,27 @@ function guruplugSpace() {
 
 function guruplugRootAccess() {
 	$.getJSON("http://app.internetcollaboratif.info/API/?action=getData&flow_id=1&since=20d", function(getFailedRoot) {
-		getFailedRoot = getFailedRoot.getData;
+		getFailedRoot = getFailedRoot.getData.reverse();
 		$("li.guruplugRootAccess h1, li.guruplugRootAccess h2, li.guruplugRootAccess div, li.guruplugRootAccess p").remove();
 		$("li.guruplugRootAccess").append("<h1>Failed Root Access</h1>");
-		$("li.guruplugRootAccess").append("<h2>Number of Failed Root Attempts, last 20 days</h2>");
+		$("li.guruplugRootAccess").append("<h2>Number of Failed Root Attempts</h2>");
 		var rootAccess = "";
+		var sum = 0;
+		var dayOfWeeks = "";
 		$.each(getFailedRoot, function(key, value){
 			rootAccess += getFailedRoot[key][1] + ",";
+			sum += parseInt(getFailedRoot[key][1]);
+			var d = new Date(parseInt(getFailedRoot[key][0]));
+			dayOfWeeks += days[d.getDay()];
 		});
 		$("li.guruplugRootAccess").append("<span class='bar'>"+rootAccess.substring(0, (rootAccess.length)-1)+"</span></h3>");
+
+		$("li.guruplugRootAccess").append("<p style='font-size:14px; letter-spacing:22px; text-align:right; font-family:monospace;'>"+dayOfWeeks+"</p>");
+		$("li.guruplugRootAccess").append("<h3>Sum: "+sum+" (in the last 20 days)</h3>");
 		$("li.guruplugRootAccess").append("<p class='updated-at'></p>");
 		$("li.guruplugRootAccess span.bar").peity("bar", {
 			width: 2*(dim-margin),
-			height: dim-90,
+			height: dim-100,
 			spacing: margin,
 			colours: ["#cecece"],
 			strokeColour: "#ffd592",
@@ -105,13 +117,40 @@ function guruplugRootAccess() {
 	setTimeout("guruplugRootAccess()", 24*60*60000);
 }
 
+function horloge() {
+	$("li.horloge").append("<h1>Current Time</h1>");
+	var currentTime = new Date();
+	var d = currentTime.getDate();
+	if(d < 10){d = "0" + d}
+	var m = s_months[currentTime.getMonth()];
+	$("li.horloge").append("<span class='date'><span class='jour'>"+d+"</span><span class='mois'>"+m+"</span></span>");
+	
+	$.getJSON("http://app.internetcollaboratif.info/API/?action=getTemp", function(getTemp) {
+		getTemp = getTemp["meteo-degrees"];
+		$("li.horloge").append("<div id='meteo-degrees'>"+getTemp.temp+"°"+getTemp.unit+"<br />"+getTemp.text+"</div>");
+	});
+	
+	$("li.horloge").append("<span id='spa'>:</span>");
+	var _i=true;
+	setInterval(function(){
+		var currentTime = new Date();
+		var h = currentTime.getHours();
+		var m = currentTime.getMinutes();
+		var s = currentTime.getSeconds();
+		if(h < 10){h = "0" + h}
+		if(m < 10){m = "0" + m}
+		if(s < 10){s = "0" + s}
+		$("li.horloge span#spa").html(h + "<span class='blink'>:</span>" + m + "'<small style='font-size:.6em;'>" + s + "</small>");
+	}, 1000);
+}
+
 function guruplugEatingCPU() {
 	var limit = 8;
 	$.get("http://app.internetcollaboratif.info/API/?action=getEatingCPU&limit="+limit, function(eatingCPU) {
 		eatingCPU = eatingCPU.getEatingCPU.value;
 		
 		$("li.memoryPie canvas, li.memoryPie h1, li.memoryPie h2, li.memoryPie div, li.memoryPie p, li.memoryPie span.pie").remove();
-		$("li.guruplugEatingCPU h1, li.guruplugEatingCPU h2, li.guruplugEatingCPU div, li.guruplugEatingCPU p").remove();
+		$("li.guruplugEatingCPU h1, li.guruplugEatingCPU h2, li.guruplugEatingCPU div, li.guruplugEatingCPU p, li.guruplugEatingCPU ul").remove();
 
 		$("li.memoryPie").append("<h1>GuruPlug Memory</h1>");
 		$("li.guruplugEatingCPU").append("<h1>GuruPlug Eating CPU</h1>");

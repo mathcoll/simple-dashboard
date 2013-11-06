@@ -28,7 +28,44 @@
   font-style: normal;
 }
 */
-
+span.blink {
+	text-decoration: blink;
+}
+span.date {
+	color: #777777;
+    display: block;
+    float: left;
+    font-weight: normal;
+    height: 70px;
+    line-height: 1.5;
+    margin: 10px;
+    padding: 10px;
+    text-align: center;
+    width: 60px;
+    font-family: 'BebasNeue';
+}
+.date .jour {
+    display: block;
+    font-size: 3em;
+    line-height: 36px;
+}
+.date .mois {
+    font-size: 1.8465em;
+}
+#spa {
+	font-size: 1.5em;
+	float: right;
+    margin: 10px 30px 10px 10px;
+}
+#spa small {
+	font-size:.8em;
+}
+div#meteo-degrees {
+	text-align: right;
+	float: right;
+	margin: 0 30px 0 0;
+	font-size: .8em;
+}
 div.gridster ul li.gs_w {
 	/*border: 1px solid #666;*/
 	box-shadow: -1px 2px 5px 1px rgba(0, 0, 0, 0.7), -1px 2px 20px rgba(128, 128, 128, 0.6) inset;
@@ -759,7 +796,7 @@ h1 {
     background: rgba(128, 128, 128, 0.3);
     font-size: 20px;
     font-weight: 400;
-    margin-bottom: 12px;
+    margin-bottom: 5px;
     text-align: center;
     padding: 5px;
 }
