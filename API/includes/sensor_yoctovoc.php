@@ -13,7 +13,7 @@ class sensor_yoctovoc extends sensor {
 	}
 	
     public function getCurrent() {
-		$serial = isset($_GET['serial'])?$_GET['serial']:"";
+		$serial = isset($_GET['serial'])?$_GET['serial']:""; #TODO, send as parameter
 		$data=array();
 		if (  !$serial ) {
 			$data = array("status" => "error", "message" => "Mandatory input data missing.");

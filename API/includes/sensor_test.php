@@ -3,6 +3,7 @@
 require(dirname(__FILE__) . '/sensor.php');
 
 class sensor_test extends sensor {
+	public $varName = "default";
 	
 	function __construct($actionName, $flow_id) {
 		// flow_id=n

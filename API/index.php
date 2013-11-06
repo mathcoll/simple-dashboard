@@ -6,6 +6,27 @@ require(dirname(__FILE__) . "/includes/config.php");
 require(dirname(__FILE__) . "/includes/db.php");
 require(dirname(__FILE__) . "/includes/trigger.php");
 
+function output($data, $object=null) {
+	if ( PHP_SAPI !== "cli" ) {
+		if ( $_GET["debug"] != "true" ) {
+			echo json_encode($data, $object);
+		} else {
+			print_r($data);
+		}
+	} else {
+		if ( $_GET["debug"] != "true" ) echo json_encode($data, $object);
+		else print_r($data);
+	}
+}
+
+// Hack for old php versions to use boolval()
+// (PHP 5 >= 5.5.0)
+if (!function_exists('boolval')) {
+	function boolval($var) {
+		return $var=="true"?true:false;
+	}
+}
+
 if ( isset($argv) ) {
 	foreach($argv AS $id => $parameter) {
 		if (preg_match_all("/--([^\s]+)=\"?([^\s]+)\"?/", $parameter, $match) ) {
@@ -27,7 +48,7 @@ if ( $_GET["debug"] == "true" ) {
 
 if ( PHP_SAPI !== "cli" ) {
 	header("Content-type: application/json");
-	if ( $_GET["no-cache"] == "true" || !isset($_GET["no-cache"]) ) {
+	if ( @$_GET["no-cache"] == "true" || !isset($_GET["no-cache"]) ) {
 		header("Cache-Control: no-cache, must-revalidate");
 		header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
 	}
@@ -57,8 +78,9 @@ $mqtt_topic			= @isset($_POST["mqtt_topic"])?$_POST["mqtt_topic"]:"";
 $name				= @isset($_POST["name"])?$_POST["name"]:@$_GET["name"];
 $password			= @isset($_POST["password"])?$_POST["password"]:"";
 $position			= @isset($_POST["position"])?$_POST["position"]:@$_GET["position"];
+$publish			= @isset($_GET["publish"])?boolval($_GET["publish"]):false;
 $previousValue		= @isset($_POST["previousValue"])?$_POST["previousValue"]:"";
-$save				= @isset($_GET["save"])?true:false;
+$save				= @isset($_GET["save"])?boolval($_GET["save"]):false;
 $since				= @isset($_GET["since"])?$_GET["since"]:"";
 $sort				= @isset($_POST["sort"])?intval($_POST["sort"]):"";
 $timestamp			= @isset($_POST["timestamp"])?intval($_POST["timestamp"]):null;
@@ -120,7 +142,10 @@ switch ( $action ) {
 		$sensor = new sensor_test($action, $flow_id);
 		$data = $sensor->getCurrent();
 		$timestamp = time();
-		$mqtt->publish($timestamp, $data[$action]["value"], "testDevice", "testChannel");
+		
+		if ( $publish == true ) {
+			$mqtt->publish($timestamp, $data[$action]["value"], "testDevice", "testChannel");
+		}
 		output($data, JSON_FORCE_OBJECT);
 	break;
 	
@@ -220,9 +245,12 @@ switch ( $action ) {
 		$sensor = new sensor_freespace($action, $flow_id);
 		$data = $sensor->getCurrent();
 		$timestamp = time();
-		$mqtt->publish($timestamp, $data[$action]["value"], "guruplug", "freespace");
 		
-		if ( $save ) {
+		if ( $publish == true ) {
+			$mqtt->publish($timestamp, $data[$action]["value"], "guruplug", "freespace");
+		}
+		
+		if ( $save == true ) {
 			$db->save($timestamp, $data[$action]["value"], $flow_id);
 		}
 		output($data, JSON_FORCE_OBJECT);
@@ -241,9 +269,12 @@ switch ( $action ) {
 		$sensor = new sensor_memoryusage($action, $flow_id);
 		$data = $sensor->getCurrent();
 		$timestamp = time();
-		$mqtt->publish($timestamp, $data[$action]["value"], "guruplug", "memory_usage");
 		
-		if ( $save ) {
+		if ( $publish == true ) {
+			$mqtt->publish($timestamp, $data[$action]["value"], "guruplug", "memory_usage");
+		}
+		
+		if ( $save == true ) {
 			$db->save($timestamp, $data[$action]["value"], $flow_id);
 		}
 		output($data, JSON_FORCE_OBJECT);
@@ -256,10 +287,30 @@ switch ( $action ) {
 		$sensor = new sensor_yoctovoc($action, $flow_id);
 		$data = $sensor->getCurrent();
 		$timestamp = time();
-		$mqtt->publish($timestamp, $data[$action]["currentValue"], "yoctovoc", "VOC");
 		
-		if ( $save ) {
+		if ( $publish == true ) {
+			$mqtt->publish($timestamp, $data[$action]["currentValue"], "yoctovoc", "VOC");
+		}
+		
+		if ( $save == true ) {
 			$db->save($timestamp, $data[$action]["currentValue"], $flow_id);
+		}
+		output($data, JSON_FORCE_OBJECT);
+	break;
+
+	case "getVirtualHub":
+		require(dirname(__FILE__) . "/includes/sensor_virtualhub.php");
+		$flow_id = null;
+		$sensor = new sensor_virtualhub($action, $flow_id);
+		$data = $sensor->getCurrent(isset($_GET['serial'])?$_GET['serial']:"");
+		$timestamp = time();
+		
+		if ( $publish == true ) {
+			$mqtt->publish($timestamp, "value", "virtualhub", "name");
+		}
+		
+		if ( $save == true ) {
+			$db->save($timestamp, $data[$action], $flow_id);
 		}
 		output($data, JSON_FORCE_OBJECT);
 	break;
@@ -271,18 +322,16 @@ switch ( $action ) {
 		$sensor = new sensor_meteodegrees("meteo-degrees", $flow_id);
 		$data = $sensor->getCurrent();
 		$timestamp = $data[$action]["ts"];
-		$mqtt->publish($timestamp, $data[$action]["temp"], "HTTP-get", "temperature");
 		
-		if ( $save ) {
+		if ( $publish == true ) {
+			$mqtt->publish($timestamp, $data[$action]["temp"], "HTTP-get", "temperature");
+		}
+		
+		if ( $save == true ) {
 			$db->save($timestamp, $data[$action]["temp"], $flow_id);
 		}
 		output($data, JSON_FORCE_OBJECT);
 	break;
-}
-
-function output($data, $object=null) {
-	if ( $_GET["debug"] != "true" ) echo json_encode($data, $object);
-	else print_r($data);
 }
 
 exit();
