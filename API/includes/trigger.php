@@ -36,7 +36,7 @@ class trigger {
 					'meta'				=> $row["meta"],
 					'action'			=> $row['action'],
 					'date'				=> date("d/m/Y H:i", $timestamp),
-					'bcc'				=> $meta->{"bcc"},
+					'bcc'				=> @$meta->{"bcc"},
 					'value'				=> $this->value,
 					'trend'				=> ""
 				);
@@ -52,7 +52,44 @@ class trigger {
 						break;
 						
 					case "sms":
-						#######
+						global $data;
+						$data = $this->data;
+						$data[0]["meta"] = preg_replace_callback("/%(.*?)%/", function($varname) {
+							$val = $varname[1];
+							global $data;
+							if( isset($data[0][$val])) {
+								return $data[0][$val];
+							} else {
+								return "$".$varname[1];
+							}
+						}, $data[0]["meta"]);
+
+						$data[0]["meta"] = json_decode($data[0]["meta"]);
+						$meta = $data[0]["meta"];
+						
+						$rootDirGGLAlert = dirname(__FILE__) . "/googalert/";
+						$command = sprintf(
+							"%sgoogalert %s -c %sgoogalert.conf -l \"%s\" -p \"%s\" -m \"%s\" -a \"%s\" \"%s\" \"%s\"",
+							$rootDirGGLAlert,
+							$_GET["debug"]==true?"-D":"",
+							$rootDirGGLAlert,
+							$meta->{"calendar_login"},
+							$meta->{"calendar_password"},
+							$meta->{"author_email"},
+							$meta->{"calendar"},
+							
+							$meta->{"subject"},
+							$meta->{"body"}
+						);
+						exec($command, $out, $result);
+						if ( $result == 0 ) {
+							$this->data = array("status" => "ok", "message" => $command);
+							return $this->data;
+						} else {
+							$this->data = array("status" => "error", "message" => $command);
+							return $this->data;
+						}
+						
 						break;
 	
 					case "mail":

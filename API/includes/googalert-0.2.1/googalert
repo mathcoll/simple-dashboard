@@ -1,0 +1,354 @@
+#!/bin/bash
+
+#    Contact		: FHH <fhh@e-galaxie.org>
+#    Web		: http://sourceforge.net/projects/googalert/
+#    Description	: Script BASH design to add event in Google Calendar
+#	have a look to https://www.google.com/calendar/ for more information
+#	on Google Calendar.
+#    Licence		: GPL3
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+NEEDED_COMMANDS="wget grep sed" ;
+
+SCRIPT_NAME=$(basename $0) ;
+CONFIG_FILE="/etc/${SCRIPT_NAME}.conf ${HOME}/.${SCRIPT_NAME}.conf" ;
+IGNORE_CONFIG_FILES=false ;
+DEBUG=false ;
+VERBOSE=false ;
+DISPLAY_EVENT_AS_XML=false ;
+TEXT_OF_PASSWORD="Not displayed" ;
+TMOUT=3 ;
+RETRY=1 ;
+usage () {
+	_CDS=${1:-1} ;
+	cat <<EOU
+
+${0} [options] <title> <message>
+
+Options :
+	-a	: Calendar to add event (default : default)
+	-c	: specify config file (default : /etc/script_name.conf -/etc/${SCRIPT_NAME}.conf-
+			then ~/.script_name.conf -~/.${SCRIPT_NAME}.conf-)
+	-d	: Size, in minutes, of event (default : 10)
+	-D	: Debug mode
+	-e	: Display xml of event an exit
+	-f	: Author of entry (default : user login -${USER}-)
+	-g	: Display an example of config file and exit.
+	-h	: This message and exit
+	-i	: Ignore all config files (overwrite -g)
+	-l	: Login google
+	-m	: Mail of author (default : user_login@domaine -${USER}@$(hostname -d)-)
+	-M	: Enable alert by mail
+	-p	: Password google
+	-P	: Disable pop-up alert
+	-S	: Disable SMS alert
+	-t	: Timer, in seconds, to run alert (default : 30)
+	-v	: Verbose mode
+	-w	: Where ? location specified (default : hostname -$(hostname)-)
+	-z	: Delta, in minutes, between declaration and event start (default : 5)
+
+All defaults values could be modified in config file.
+Default title can also be modified by config file (default title : "Event from hostname").
+
+Examples :
+> Create notification with default title and text "Text" :
+	${0} "Text" 
+
+> Create notification with title "Title" and text in two lines :
+	${0} "Title" "Text who can be write on
+	> multi lines"
+
+> Display event as xml with a little text :
+	${0} -e "Little text"
+EOU
+	exit ${_CDS} ;
+}
+
+display_configfile () {
+	cat <<EOF
+# "$0.conf" : file to configure script "${0}"
+# adapt config to your need and copie it in /etc/${SCRIPT_NAME}.conf
+# or to your home like that ~/.${SCRIPT_NAME}.conf
+
+# Name of agenda target :
+# AGENDA="default" ;
+
+# Login Google (address mail) :
+# LOGIN="" ;
+
+# Password Google :
+# PASSWORD="" ;
+
+# Delay beetween consignation and start time :
+# (in minutes)
+# DELTA=5 ;
+
+# Duration of event in calendar :
+# (in minutes)
+# EVENT_DURATION=10 ;
+
+# Author name :
+# AUTHOR=FHH ;
+# AUTHOR="John DOE" ;
+
+# Mail adress of author :
+# MAIL_ADDR=fhh@admin-linux.fr ;
+
+# Display a pop-up to inform :
+# POPUP=true ;
+
+# Use SMS to alert :
+# SMS=true ;
+
+# Use email to alert :
+# EMAIL=false ;
+
+# Delay between consignation and alert 
+# TIMER=30 ;
+
+# Default title :
+# TITLE=Event from hostname
+
+# Location of alert (by default the name
+# of computer, multiline accepted) :
+# WHERE="Admin Linux
+# Somewhere in france
+# France" ;
+
+EOF
+	
+	exit 0 ;
+}
+
+enable_output () {
+	${VERBOSE} || {
+		exec 1>&3 ;
+		exec 2>&3 ; 
+	}
+}
+
+disable_output () {
+	exec 2>&1 ;
+	exec 3>&1 ;
+	exec >/dev/null ;
+}
+
+die () {
+	enable_output ;
+	echo "$@" >&2 ;
+	exit 1 ;
+}
+
+# Check requirements to script :
+check_requirements () {
+	command -v command >/dev/null 2>&1 || {
+		echo "WARNING> \"command\" not found. Check requirements skipped !"
+		return 1 ;
+	}
+	for requirement in ${NEEDED_COMMANDS} ; do
+		echo -n "checking for \"$requirement\" ... " ;
+		command -v ${requirement} > /dev/null && {
+			echo "Ok" ;
+			continue ;
+		} || {
+			echo "required but not found !" ;
+			RETURN=1 ;
+		}
+		done
+	[ -z "${RETURN}" ] || \
+		die "> Requirement missing. Try \"-v\" for more informations" ;
+}
+
+init () {
+#	Select debug mode
+	${DEBUG} && {
+		set -x
+		VERBOSE=true ;
+	}
+#	Select verbose mode
+	${VERBOSE} || { disable_output ; } ;
+	check_requirements ;
+	${IGNORE_CONFIG_FILES} || {
+		echo "Searching config file ..." ;
+		for fic in ${CONFIG_FILE} ; do
+			[ -r "${fic}" ] && {
+				echo "\"$fic\" found and is readeable : loading" ;
+				. "${fic}"
+			}
+		done
+	}
+	echo "Initializing variables ..." ;
+	: ${CMD_LOGIN:=${LOGIN:=""}} ;
+	: ${TEXT_OF_LOGIN:=${CMD_LOGIN:-"Not set"}} ;
+	echo "Login google	: ${TEXT_OF_LOGIN}" ;
+	: ${CMD_PASSWORD:=${PASSWORD:=""}} ;
+	[ -z "${CMD_PASSWORD}" ] && { TEXT_OF_PASSWORD="Not set" ; } ;
+	echo "Password google	: ${TEXT_OF_PASSWORD}" ;
+	: ${CMD_AGENDA:=${AGENDA:="default"}} ;
+	echo "Agenda		: ${CMD_AGENDA}" ;
+	: ${CMD_TITLE:=${TITLE:="Event from $(hostname)"}} ;
+	echo "Title		: ${CMD_TITLE}" ;
+	: ${CMD_DELTA:=${DELTA:=5}} ;
+	echo "Event in	: ${CMD_DELTA} minutes" ;
+	: ${CMD_EVENT_DURATION:=${EVENT_DURATION:=10}} ;
+	echo "Event length	: ${CMD_EVENT_DURATION} minutes" ;
+	: ${CMD_AUTHOR:=${AUTHOR:=${USER:-Anonymous}}} ;
+	echo "Author name	: ${CMD_AUTHOR}" ;
+	: ${CMD_MAIL_ADDR:=${MAIL_ADDR:=${USER:-Anonymous}@$(hostname -d)}} ;
+	echo "Mail		: ${CMD_MAIL_ADDR}" ;
+	: ${CMD_POPUP:=${POPUP:=true}} ;
+	echo "Pop-up alert	: ${CMD_POPUP}" ;
+	: ${CMD_SMS:=${SMS:=true}} ;
+	echo "SMS alert	: ${CMD_SMS}" ;
+	: ${CMD_EMAIL:=${EMAIL:=false}} ;
+	echo "E-Mail alert	: ${CMD_EMAIL}" ;
+	: ${CMD_TIMER:=${TIMER:=30}} ;
+	echo "Alert in	: ${CMD_TIMER} seconds" ;
+	: ${CMD_WHERE:=${WHERE:=$(hostname)}} ;
+	echo "Location	: ${CMD_WHERE}" ;
+	xml_alert ;
+}
+
+xml_alert () {
+	${CMD_POPUP} && XML_ALERT="${XML_ALERT}
+			<gd:reminder method='alert' minutes='${CMD_DELTA}' />" ;
+	${CMD_SMS} && XML_ALERT="${XML_ALERT}
+			<gd:reminder method='sms' minutes='${CMD_DELTA}' />" ;
+	${CMD_EMAIL} && XML_ALERT="${XML_ALERT}
+			<gd:reminder method='email' minutes='${CMD_DELTA}' />" ;
+}
+
+display_event_as_xml () {
+	enable_output ;
+	echo "${EVENT}" ;
+	exit 0 ;
+}
+
+check_id () {
+	echo "Check if login an password are set ..."
+	[ -z "${CMD_LOGIN}" -o -z "${CMD_PASSWORD}" ] && \
+		die "> Login and password must be set ta add event !" ;
+}
+
+authentify () {
+	echo "Authentify user on Google by ClientLogin page..."
+	AUTH=$(wget --no-check-certificate -T ${TMOUT} -t ${RETRY} -S -q -O - --post-data="Email=${CMD_LOGIN}&Passwd=${CMD_PASSWORD}&source=$(hostname)&service=cl" \
+        	https://www.google.com/accounts/ClientLogin 2>&1 | grep Auth= | sed -e 's/^Auth=//') ;
+
+	[ -z "${AUTH}" ] && \
+		die "> Authentification failed ! Check your login and password." ;
+}
+
+add_event () {
+	echo "Add event in calendar \"${CMD_AGENDA}\"..."
+	echo "URL : https://www.google.com/calendar/feeds/${CMD_AGENDA}/private/full" ;
+
+	result=$(wget --no-check-certificate -T ${TMOUT} -t ${RETRY} -S -q -O - --header="Authorization: GoogleLogin auth=${AUTH}" \
+        	--header='Content-type: application/atom+xml' \
+        	--post-data="${EVENT}" \
+        	https://www.google.com/calendar/feeds/${CMD_AGENDA}/private/full 2>&1) ;
+
+	[ -z "${result}" ] && \
+		die "> Access to service failed ! Please try later." ;
+	
+	[ ! -z "$(echo $result | grep 'HTTP/1.1 302')" ] && {
+		echo "Google ask a confirmation..." ;
+		confirm_url=$(echo $result | grep "Location: .*gsessionid=.*" | sed -e 's/.*Location:[[:blank:]]\([^ ]*\)[[:blank:]].*/\1/') ;
+		[ -z "${confirm_url}" ] && \
+			die "> Confirmation url not found ! Please try later." ;
+		
+		echo "Trying to send a confirmation..." ;
+		echo "URL : ${confirm_url}" ;
+		result=$(wget --no-check-certificate -T ${TMOUT} -t ${RETRY} -S -q -O - --header="Authorization: GoogleLogin auth=${AUTH}" \
+			--header='Content-type: application/atom+xml' \
+			--post-data="${EVENT}" \
+			${confirm_url} 2>&1) ;
+
+		[ -z "${result}" ] && \
+			die "> Confirmation failed ! Please try later." ;
+	}
+
+	[ -z "$(echo $result | grep 'HTTP/1.1 201')" ] && \
+		die "> Failed to create event." ;
+
+	echo "OK ! Event added in your calendar."
+}
+
+## MAIN ##
+while getopts ":a:c:hDvigd:f:m:MPSt:w:z:el:p:" opt ; do
+	case ${opt} in
+		h) usage 0 ;;
+		g) display_configfile && exit 0 ;;
+		D) DEBUG=true ;;
+		v) VERBOSE=true ;;
+		i) IGNORE_CONFIG_FILES=true ;;
+		e) DISPLAY_EVENT_AS_XML=true ;;
+		c) CONFIG_FILE=${OPTARG} ;;
+		a) CMD_AGENDA=${OPTARG} ;;
+		d) CMD_EVENT_DURATION=${OPTARG} ;;
+		f) CMD_AUTHOR=${OPTARG} ;;
+		m) CMD_MAIL_ADDR=${OPTARG} ;;
+		M) CMD_EMAIL=true ;;
+		p) CMD_PASSWORD=${OPTARG} ;;
+		l) CMD_LOGIN=${OPTARG} ;;
+		P) CMD_POPUP=false ;;
+		S) CMD_SMS=false ;;
+		t) CMS_TIMER=${OPTARG} ;;
+		w) CMD_WHERE=${OPTARG} ;;
+		z) CMD_DELTA=${OPTARG} ;;
+		:) echo -e "> Option -$OPTARG argument required\n" ;
+			usage 1 ;;
+		*) echo -e "> Invalid option \"-$OPTARG\".\n" ;
+			usage 1 ;;
+	esac
+done
+
+shift $((OPTIND-1))
+case $# in
+	0) usage 0 ;;
+	1) CMD_TEXT=${1} ;;
+	2) CMD_TITLE=${1} ;
+		CMD_TEXT=${2} ;;
+	*) echo -e "> Bad number of arguments\n\t${0} \"Text\"\n\t${0} \"Title\" \"Text\"" ;
+		usage 1 ;
+esac
+
+init ;
+
+EVENT="<entry xmlns='http://www.w3.org/2005/Atom' xmlns:gd='http://schemas.google.com/g/2005'>
+	<category scheme='http://schemas.google.com/g/2005#kind' term='http://schemas.google.com/g/2005#event'></category>
+	<title type='text'>${CMD_TITLE}</title>
+	<content type='text'>${CMD_TEXT}</content>
+	<author>
+		<name>${CMD_AUTHOR}</name>
+		<email>${CMD_MAIL_ADDR}</email>
+	</author>
+	<gd:transparency value='http://schemas.google.com/g/2005#event.transparent'></gd:transparency>
+	<gd:eventStatus value='http://schemas.google.com/g/2005#event.confirmed'></gd:eventStatus>
+	<gd:visibility value='http://schemas.google.com/g/2005#event.public'></gd:visibility>
+	<gd:where valueString='${CMD_WHERE}'></gd:where>
+	<gd:when startTime='$(date -u -d @$(expr $(date +%s) + ${CMD_DELTA} \* 60 + ${CMD_TIMER}) +%Y-%m-%dT%T.000Z)'
+		endTime='$(date -u -d @$(expr $(date +%s) + ${CMD_DELTA} \* 60 + ${CMD_TIMER} + ${CMD_EVENT_DURATION} \* 60) +%Y-%m-%dT%T.000Z)'>${XML_ALERT}
+	</gd:when>
+</entry>" ;
+
+${DISPLAY_EVENT_AS_XML} && {
+	display_event_as_xml ;
+}
+
+check_id ;
+authentify ;
+add_event ;
