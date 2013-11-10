@@ -98,11 +98,11 @@ function guruplugRootAccess() {
 			rootAccess += getFailedRoot[key][1] + ",";
 			sum += parseInt(getFailedRoot[key][1]);
 			var d = new Date(parseInt(getFailedRoot[key][0]));
-			dayOfWeeks += days[d.getDay()];
+			dayOfWeeks += "<span>"+days[d.getDay()]+"</span>";
 		});
 		$("li.guruplugRootAccess").append("<span class='bar'>"+rootAccess.substring(0, (rootAccess.length)-1)+"</span></h3>");
 
-		$("li.guruplugRootAccess").append("<p style='font-size:14px; letter-spacing:22px; text-align:right; font-family:monospace;'>"+dayOfWeeks+"</p>");
+		$("li.guruplugRootAccess").append("<p class='dayOfWeeks'>"+dayOfWeeks+"</p>");
 		$("li.guruplugRootAccess").append("<h3>Sum: "+sum+" (in the last 20 days)</h3>");
 		$("li.guruplugRootAccess").append("<p class='updated-at'></p>");
 		$("li.guruplugRootAccess span.bar").peity("bar", {
@@ -126,7 +126,7 @@ function horloge() {
 	$("li.horloge").append("<span class='date'><span class='jour'>"+d+"</span><span class='mois'>"+m+"</span></span>");
 	
 	$.getJSON("http://app.internetcollaboratif.info/API/?action=getTemp", function(getTemp) {
-		getTemp = getTemp["meteo-degrees"];
+		getTemp = getTemp["getTemp"];
 		$("li.horloge").append("<div id='meteo-degrees'>"+getTemp.temp+"°"+getTemp.unit+"<br />"+getTemp.text+"</div>");
 	});
 	

@@ -93,7 +93,15 @@ div.gridster ul li:nth-child(7) { background-color: #262626; }
 div.gridster ul li:nth-child(8) { background-color: #262626; }
 div.gridster ul li:nth-child(9) { background-color: #262626; }
 div.gridster ul li:nth-child(10) { background-color: #262626; }
-
+p.dayOfWeeks {
+	font-size:14px;
+	text-align:center;
+	font-family:monospace;
+}
+p.dayOfWeeks span {
+	width:33px;
+	display: inline-block;
+}
 ul.liste {
 	margin: 0;
 	padding: 10px;
