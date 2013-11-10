@@ -7,7 +7,8 @@ class db {
 	public $data = array();
 		
 	function __construct($dbFile=null) {
-		$this->dbFile = isset($dbFile)?$dbFile:dirname(__FILE__) . "/../data/dashboard.db";
+		$this->dbFile = !is_null($dbFile)?$dbFile:dirname(__FILE__) . "/../../data/dashboard.db";
+		//print "->".$this->dbFile."<-\n\n";
 		try {
 			file_exists($this->dbFile);
 			$this->dbh = new PDO("sqlite:".$this->dbFile);
