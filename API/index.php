@@ -6,17 +6,18 @@ require(dirname(__FILE__) . "/includes/config.php");
 require(dirname(__FILE__) . "/includes/db.php");
 require(dirname(__FILE__) . "/includes/trigger.php");
 
-function output($data, $object=null) {
-	if ( PHP_SAPI !== "cli" ) {
-		if ( $_GET["debug"] != "true" ) {
-			echo json_encode($data, $object);
-		} else {
-			print_r($data);
+function output($data, $object=null, $actionSettings=null) {
+	if ( $_GET["debug"] == "true" ) {
+		if ( isset($actionSettings) ) {
+			$data['name']			= $actionSettings['name'];
+			$data['description']	= $actionSettings['description'];
+			array_push($actionSettings['parameters'], "action", "debug");
+			$data['parameters']		= $actionSettings['parameters'];
 		}
+		print_r($data);
 	} else {
-		if ( $_GET["debug"] != "true" ) echo json_encode($data, $object);
-		else print_r($data);
-	}
+		echo json_encode($data, $object);
+	}	
 }
 
 // Hack for old php versions to use boolval()
@@ -29,7 +30,7 @@ if (!function_exists('boolval')) {
 
 if ( isset($argv) ) {
 	foreach($argv AS $id => $parameter) {
-		if (preg_match_all("/--([^\s]+)=\"?([^\s]+)\"?/", $parameter, $match) ) {
+		if (preg_match_all("/-?-([^\s]+)=\"?([^\s]+)\"?/", $parameter, $match) ) {
 			$pName = $match[1][0];
 			$pVal = $match[2][0];
 			$_GET[$pName] = $pVal;
@@ -54,284 +55,614 @@ if ( PHP_SAPI !== "cli" ) {
 	}
 }
 
-$db					= new db(dirname(__FILE__) . "/../data/dashboard.db");
-$mqtt				= new mqtt();
-$config				= new config();
-$trigger			= new trigger();
+$vars['db']					= new db(); //dirname(__FILE__) . "/../data/dashboard.db"
+$vars['mqtt']				= new mqtt();
+$vars['config']				= new config();
+$vars['trigger']			= new trigger();
 
-$action				= @$_GET["action"];
-$data_type_id		= @isset($_POST["data_type_id"])?intval($_POST["data_type_id"]):"";
-$enable				= @isset($_POST["enable"])?intval($_POST["enable"]):"";
-$event				= @isset($_POST["event"])?$_POST["event"]:"";
-$exitOnAlert		= @isset($_POST["exitOnAlert"])?intval($_POST["exitOnAlert"]):"";
-$filter_enable		= @isset($_POST["filter_enable"])?@$_POST["filter_enable"]:@$_GET["filter_enable"];
-$flow_id			= @isset($_GET['flow_id'])?intval($_GET['flow_id']):null;
-$ipv4				= @isset($_POST["ipv4"])?$_POST["ipv4"]:@$_GET["ipv4"];
-$ipv6				= @isset($_POST["ipv6"])?$_POST["ipv6"]:@$_GET["ipv6"];
-$json_force_object	= @isset($_POST["json_force_object"])?$_POST["json_force_object"]:@$_GET["json_force_object"];
-$limit				= @isset($_GET['limit'])?intval($_GET['limit']):10;
-$logEventToFlow_id	= @isset($_POST["logEventToFlow_id"])?intval($_POST["logEventToFlow_id"]):"";
-$maxthreshold		= @isset($_POST["maxthreshold"])?$_POST["maxthreshold"]:@$_GET["maxthreshold"];
-$meta				= @isset($_POST["meta"])?$_POST["meta"]:"";
-$minthreshold		= @isset($_POST["minthreshold"])?$_POST["minthreshold"]:@$_GET["minthreshold"];
-$mqtt_topic			= @isset($_POST["mqtt_topic"])?$_POST["mqtt_topic"]:"";
-$name				= @isset($_POST["name"])?$_POST["name"]:@$_GET["name"];
-$password			= @isset($_POST["password"])?$_POST["password"]:"";
-$position			= @isset($_POST["position"])?$_POST["position"]:@$_GET["position"];
-$publish			= @isset($_GET["publish"])?boolval($_GET["publish"]):false;
-$previousValue		= @isset($_POST["previousValue"])?$_POST["previousValue"]:"";
-$save				= @isset($_GET["save"])?boolval($_GET["save"]):false;
-$since				= @isset($_GET["since"])?$_GET["since"]:"";
-$sort				= @isset($_POST["sort"])?intval($_POST["sort"]):"";
-$timestamp			= @isset($_POST["timestamp"])?intval($_POST["timestamp"]):null;
-$trigger_id			= @isset($_POST['trigger_id'])?intval($_POST['trigger_id']):@$_GET["trigger_id"];
-$triggerAction		= @isset($_POST["triggerAction"])?$_POST["triggerAction"]:"";
-$unit_id			= @isset($_POST["unit_id"])?intval($_POST["unit_id"]):"";
-$username			= @isset($_POST["username"])?$_POST["username"]:"";
-$value				= @isset($_POST["value"])?$_POST["value"]:"";
+$vars['action']				= @$_GET["action"];
+$functionName				= "ACTION_".$vars['action'];
+$vars['data_type_id']		= @isset($_POST["data_type_id"])?intval($_POST["data_type_id"]):"";
+$vars['enable']				= @isset($_POST["enable"])?intval($_POST["enable"]):"";
+$vars['event']				= @isset($_POST["event"])?$_POST["event"]:"";
+$vars['exitOnAlert']		= @isset($_POST["exitOnAlert"])?intval($_POST["exitOnAlert"]):"";
+$vars['filter_enable']		= @isset($_POST["filter_enable"])?@$_POST["filter_enable"]:@$_GET["filter_enable"];
+$vars['flow_id']			= @isset($_GET['flow_id'])?intval($_GET['flow_id']):null;
+$vars['ipv4']				= @isset($_POST["ipv4"])?$_POST["ipv4"]:@$_GET["ipv4"];
+$vars['ipv6']				= @isset($_POST["ipv6"])?$_POST["ipv6"]:@$_GET["ipv6"];
+$vars['json_force_object']	= @isset($_POST["json_force_object"])?$_POST["json_force_object"]:@$_GET["json_force_object"];
+$vars['limit']				= @isset($_GET['limit'])?intval($_GET['limit']):10;
+$vars['logEventToFlow_id']	= @isset($_POST["logEventToFlow_id"])?intval($_POST["logEventToFlow_id"]):"";
+$vars['maxthreshold']		= @isset($_POST["maxthreshold"])?$_POST["maxthreshold"]:@$_GET["maxthreshold"];
+$vars['meta']				= @isset($_POST["meta"])?$_POST["meta"]:"";
+$vars['minthreshold']		= @isset($_POST["minthreshold"])?$_POST["minthreshold"]:@$_GET["minthreshold"];
+$vars['mqtt_topic']			= @isset($_POST["mqtt_topic"])?$_POST["mqtt_topic"]:"";
+$vars['name']				= @isset($_POST["name"])?$_POST["name"]:@$_GET["name"];
+$vars['password']			= @isset($_POST["password"])?$_POST["password"]:"";
+$vars['position']			= @isset($_POST["position"])?$_POST["position"]:@$_GET["position"];
+$vars['publish']			= @isset($_GET["publish"])?boolval($_GET["publish"]):false;
+$vars['previousValue']		= @isset($_POST["previousValue"])?$_POST["previousValue"]:"";
+$vars['save']				= @isset($_GET["save"])?boolval($_GET["save"]):false;
+$vars['since']				= @isset($_GET["since"])?$_GET["since"]:"";
+$vars['sort']				= @isset($_POST["sort"])?intval($_POST["sort"]):"";
+$vars['timestamp']			= @isset($_POST["timestamp"])?intval($_POST["timestamp"]):null;
+$vars['trigger_id']			= @isset($_POST['trigger_id'])?intval($_POST['trigger_id']):@$_GET["trigger_id"];
+$vars['triggerAction']		= @isset($_POST["triggerAction"])?$_POST["triggerAction"]:"";
+$vars['unit_id']			= @isset($_POST["unit_id"])?intval($_POST["unit_id"]):"";
+$vars['sername']			= @isset($_POST["username"])?$_POST["username"]:"";
+$vars['value']				= @isset($_POST["value"])?$_POST["value"]:"";
 
+$vars['actions'] = array(
+		"help" => array(
+			"name"			=> "help",
+			"description"	=> "Display help message and list enabled functions",
+			"parameters"	=> array(),
+		),
+		"test" => array(
+			"name"			=> "test",
+			"description"	=> "Test function ; do nothing",
+			"parameters"	=> array(),
+		),
+		"triggerAction" => array(
+			"name"			=> "triggerAction",
+			"description"	=> "activate a trigger",
+			"parameters"	=> array("trigger_id", "timestamp", "value", "previousValue"),
+		),
+		"addData" => array(
+			"name"			=> "addData",
+			"description"	=> "Add data to flow",
+			"parameters"	=> array("timestamp", "value", "flow_id"),
+		),
+		"setData" => array(
+			"name"			=> "setData",
+			"description"	=> "Add data to flow - addData Alias",
+			"parameters"	=> array("timestamp", "value", "flow_id"),
+		),
+		"getDevices" => array(
+			"name"			=> "getDevices",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"addDevice" => array(
+			"name"			=> "addDevice",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getFlows" => array(
+			"name"			=> "getFlows",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"addFlow" => array(
+			"name"			=> "addFlow",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getDataTypes" => array(
+			"name"			=> "getDataTypes",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getUnits" => array(
+			"name"			=> "getUnits",
+			"description"	=> "Get units from DB",
+			"parameters"	=> array(),
+		),
+		"getTriggers" => array(
+			"name"			=> "getTriggers",
+			"description"	=> "Get triggers from DB",
+			"parameters"	=> array(),
+		),
+		"addTrigger" => array(
+			"name"			=> "addTrigger",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"removeTrigger" => array(
+			"name"			=> "removeTrigger",
+			"description"	=> "Remove a trigger from DB",
+			"parameters"	=> array("trigger_id"),
+		),
+		"getData" => array(
+			"name"			=> "getData",
+			"description"	=> "Get data from timeseries",
+			"parameters"	=> array("flow_id", "since"),
+		),
+		"getAverage" => array(
+			"name"			=> "getAverage",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getMin" => array(
+			"name"			=> "getMin",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getMax" => array(
+			"name"			=> "getMax",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getEatingCPU" => array(
+			"name"			=> "getEatingCPU",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getFreeSpace" => array(
+			"name"			=> "getFreeSpace",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"guruplugStarted" => array(
+			"name"			=> "guruplugStarted",
+			"description"	=> "Not yet implemented",
+			"parameters"	=> array(),
+		),
+		"getMemory" => array(
+			"name"			=> "getMemory",
+			"description"	=> "",
+			"parameters"	=> array(),
+		),
+		"getVOC" => array(
+			"name"			=> "getVOC",
+			"description"	=> "Get information from YoctoVOC Module",
+			"parameters"	=> array("serial"),
+		),
+		"getVirtualHub" => array(
+			"name"			=> "getVirtualHub",
+			"description"	=> "Get information from VirtualHub",
+			"parameters"	=> array("serial"),
+		),
+		"getTemp" => array(
+			"name"			=> "getTemp",
+			"description"	=> "Get current temperature from Yahoo feed",
+			"parameters"	=> array(),
+		),
+);
 
-
-if ( $json_force_object == "true" ) {
-	$json_force_object = JSON_FORCE_OBJECT;
+if ( $vars['json_force_object'] == "true" ) {
+	$vars['json_force_object'] = JSON_FORCE_OBJECT;
 } else {
-	$json_force_object = null;
+	$vars['json_force_object'] = null;
 }
 
-if( !$action ) {
-	$data = array("status" => "error", "message" => "Mandatory input data missing (action).");
-	if ( $_GET["debug"] != "true" ) echo json_encode($data);
-	else echo print_r($data);
-	exit();
-}
+if ( isset($vars['since']) ) {
+	preg_match_all("/(\d+)(\w+)/", $vars['since'], $match);
+	$vars['sinceVal']		= @intval($match[1][0]);
+	$vars['sincePeriod']	= @$match[2][0];
 
-if ( isset($since) ) {
-	preg_match_all("/(\d+)(\w+)/", $since, $match);
-	$sinceVal = @intval($match[1][0]);
-	$sincePeriod = @$match[2][0];
-
-	//print $since."<br />";
-	//print $sinceVal."<br />";
-	//print $sincePeriod."<br />";
-
-	switch ( $sincePeriod ) {
+	switch ( $vars['sincePeriod'] ) {
 		case "Y":
-			$sinceTimestamp = mktime(date("H"), date("i"), date("s"), date('m'), date('d'), date('Y')-$sinceVal);
+			$vars['sinceTimestamp'] = mktime(date("H"), date("i"), date("s"), date('m'), date('d'), date('Y')-$vars['sinceVal']);
 			break;
 
 		case "m":
-			$sinceTimestamp = mktime(date("H"), date("i"), date("s"), date('m')-$sinceVal, date('d'), date('Y'));
+			$vars['sinceTimestamp'] = mktime(date("H"), date("i"), date("s"), date('m')-$vars['sinceVal'], date('d'), date('Y'));
 			break;
 
 		case "d":
-			$sinceTimestamp = mktime(date("H"), date("i"), date("s"), date('m'), date('d')-$sinceVal, date('Y'));
+			$vars['sinceTimestamp'] = mktime(date("H"), date("i"), date("s"), date('m'), date('d')-$vars['sinceVal'], date('Y'));
 			break;
 
 		case "h":
 		default:
-			$sinceTimestamp = mktime(date("H")-$sinceVal, date("i"), date("s"), date('m'), date('d'), date('Y'));
+			$vars['sinceTimestamp'] = mktime(date("H")-$vars['sinceVal'], date("i"), date("s"), date('m'), date('d'), date('Y'));
 			break;
 	}
-	//print $sinceTimestamp;
+	//print $vars['sinceTimestamp'];
 }
 
-switch ( $action ) {
-	case "test":
-		require(dirname(__FILE__) . "/includes/sensor_test.php");
-		$flow_id = null;
-		$sensor = new sensor_test($action, $flow_id);
-		$data = $sensor->getCurrent();
-		$timestamp = time();
-		
-		if ( $publish == true ) {
-			$mqtt->publish($timestamp, $data[$action]["value"], "testDevice", "testChannel");
-		}
+if( !$vars['action'] ) {
+	$data = array("status" => "error", "message" => "Mandatory input (action) missing.");
+	output($data, JSON_FORCE_OBJECT);
+	ACTION_help($actionSettings, $vars);
+	exit();
+} else {
+	$actionSettings = @$vars['actions'][$vars['action']];
+	//print_r($actionSettings);
+	if( !function_exists($functionName) ) {
+		$data = array("status" => "error", "message" => sprintf("Action '%s' is not defined.", $vars['action']));
 		output($data, JSON_FORCE_OBJECT);
-	break;
+		ACTION_help($actionSettings, $vars);
+		exit();
+	} else {
+		$functionName = "ACTION_".$vars['action'];
+		$functionName($actionSettings, $vars);
+	}
+}
+
+
+
+
+
+
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_help($actionSettings, $vars) {
+	$action = $vars['action'];
+	$data[$action] = array();
+
+	foreach( $vars['actions'] as $function ) {
+		array_push($data[$action], $function);
+	}
 	
-	case "triggerAction":
-		$data = $trigger->triggerAction($trigger_id, $timestamp, $value, $previousValue);
-		output($data);
-	break;
-	
-	
-	case "setData":
-	case "addData":
-		$data = $db->setData($timestamp, $value, $flow_id);
-		output($data);
-	break;
-	
-	case "getDevices":
-		$data = $config->getDevices();
-		output($data);
-	break;
-	
-	case "addDevice":
-		$data = $config->addDevice($username, $password, $name, $position, $ipv6, $ipv4);
-		output($data);
-	break;
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getFlows":
-		$data = $config->getFlows($flow_id);
-		output($data);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_test($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_test.php");
+	$action = $vars['action'];
+	$flow_id = null;
+	$sensor = new sensor_test($action, $flow_id);
+	$data = $sensor->getCurrent();
 
-	case "addFlow":
-		$data = $config->addFlow($name, $username, $password, $unit_id, $mqtt_topic, $data_type_id);
-		output($data);
-	break;
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish(time(), $data[$action]["value"], "testDevice", "testChannel");
+		$data["published"] = true;
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
 
-	case "getDataTypes":
-		$data = $config->getDataTypes();
-		output($data);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_triggerAction($actionSettings, $vars) {
+	$data = $vars['trigger']->triggerAction($vars['trigger_id'], $vars['timestamp'], $vars['value'], $vars['previousValue']);
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getUnits":
-		$data = $config->getUnits();
-		output($data);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_setData($actionSettings, $vars) {
+	ACTION_addData($actionSettings, $vars);
+}
 
-	case "getTriggers":
-		$data = $config->getTriggers($trigger_id, $filter_enable);
-		output($data);
-	break;
-	
-	case "addTrigger":
-		$data = $config->addTrigger($username, $password, $meta, $flow_id, $maxthreshold, $name, $event, $triggerAction, $exitOnAlert, $logEventToFlow_id, $sort, $enable);
-		output($data);
-	break;
-	
-	case "removeTrigger":
-		$data = $config->removeTrigger($trigger_id);
-		output($data);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_addData($actionSettings, $vars) {
+	$data = $vars['db']->setData($vars['timestamp'], $vars['value'], $vars['flow_id']);
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getData":
-		$data = $db->getData($since, $sinceTimestamp, $flow_id);
-		output($data);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getDevices($actionSettings, $vars) {
+	$data = $vars['config']->getDevices();
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getAverage": ## only for integer
-	case "getAvg": ## only for integer
-		$data = $db->getAvg($since, $sinceTimestamp, $flow_id);
-		output($data);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_addDevice($actionSettings, $vars) {
+	$data = $vars['config']->addDevice($vars['username'], $vars['password'], $vars['name'], $vars['position'], $vars['ipv6'], $vars['ipv4']);
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getMinimum": ## only for integer
-	case "getMin": ## only for integer
-		$data = $db->getMax($since, $sinceTimestamp, $flow_id);
-		output($data);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getFlows($actionSettings, $vars) {
+	$data = $vars['config']->getFlows($vars['flow_id']);
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getMaximum": ## only for integer
-	case "getMax": ## only for integer
-		$data = $db->getMax($since, $sinceTimestamp, $flow_id);
-		output($data);
-	break;
-	
-	case "getEatingCPU":
-	case "eating-cpu":
-		require(dirname(__FILE__) . "/includes/sensor_cpu.php");
-		$flow_id = null;
-		$sensor = new sensor_cpu($action, $flow_id);
-		$data = $sensor->getCurrent($limit);
-		output($data);
-	break;
+/**
+ * @param: string $name
+ * @param: string $username
+ * @param: string $password
+ * @param: integer $unit_id
+ * @param: string $mqtt_topic
+ * @param: integer $data_type_id
+ * @return: 
+ */
+function ACTION_addFlow($actionSettings, $vars) {
+	$data = $vars['config']->addFlow(
+		$vars['name'],
+		$vars['username'],
+		$vars['password'],
+		$vars['unit_id'],
+		$vars['mqtt_topic'],
+		$vars['data_type_id']
+	);
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getFreeSpace":
-	case "free-space-left":
-		require(dirname(__FILE__) . "/includes/sensor_freespace.php");
-		$flow_id = 2;
-		$sensor = new sensor_freespace($action, $flow_id);
-		$data = $sensor->getCurrent();
-		$timestamp = time();
-		
-		if ( $publish == true ) {
-			$mqtt->publish($timestamp, $data[$action]["value"], "guruplug", "freespace");
-		}
-		
-		if ( $save == true ) {
-			$db->save($timestamp, $data[$action]["value"], $flow_id);
-		}
-		output($data, JSON_FORCE_OBJECT);
-	break;
-	
-	case "guruplug-started":
-		// TODO
-		// TODO
-		// TODO
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getDataTypes($actionSettings, $vars) {
+	$data = $vars['config']->getDataTypes();
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getMemory":
-	case "memory-usage":
-		require(dirname(__FILE__) . "/includes/sensor_memoryusage.php");
-		$flow_id = 4;
-		$sensor = new sensor_memoryusage($action, $flow_id);
-		$data = $sensor->getCurrent();
-		$timestamp = time();
-		
-		if ( $publish == true ) {
-			$mqtt->publish($timestamp, $data[$action]["value"], "guruplug", "memory_usage");
-		}
-		
-		if ( $save == true ) {
-			$db->save($timestamp, $data[$action]["value"], $flow_id);
-		}
-		output($data, JSON_FORCE_OBJECT);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getUnits($actionSettings, $vars) {
+	$data = $vars['config']->getUnits();
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getVOC":
-	case "yocto-voc":
-		require(dirname(__FILE__) . "/includes/sensor_yoctovoc.php");
-		$flow_id = 5;
-		$sensor = new sensor_yoctovoc($action, $flow_id);
-		$data = $sensor->getCurrent();
-		$timestamp = time();
-		
-		if ( $publish == true ) {
-			$mqtt->publish($timestamp, $data[$action]["currentValue"], "yoctovoc", "VOC");
-		}
-		
-		if ( $save == true ) {
-			$db->save($timestamp, $data[$action]["currentValue"], $flow_id);
-		}
-		output($data, JSON_FORCE_OBJECT);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getTriggers($actionSettings, $vars) {
+	$data = $vars['config']->getTriggers($vars['trigger_id'], $vars['filter_enable']);
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getVirtualHub":
-		require(dirname(__FILE__) . "/includes/sensor_virtualhub.php");
-		$flow_id = null;
-		$sensor = new sensor_virtualhub($action, $flow_id);
-		$data = $sensor->getCurrent(isset($_GET['serial'])?$_GET['serial']:"");
-		$timestamp = time();
-		
-		if ( $publish == true ) {
-			$mqtt->publish($timestamp, "value", "virtualhub", "name");
-		}
-		
-		if ( $save == true ) {
-			$db->save($timestamp, $data[$action], $flow_id);
-		}
-		output($data, JSON_FORCE_OBJECT);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_addTrigger($actionSettings, $vars) {
+	$data = $vars['config']->addTrigger(
+		$vars['username'],
+		$vars['password'],
+		$vars['meta'],
+		$vars['flow_id'],
+		$vars['maxthreshold'],
+		$vars['name'],
+		$vars['event'],
+		$vars['triggerAction'],
+		$vars['exitOnAlert'],
+		$vars['logEventToFlow_id'],
+		$vars['sort'],
+		$vars['enable']
+	);
+	output($data, null, $actionSettings);
+	exit();
+}
 
-	case "getTemp":
-	case "meteo-degrees":
-		require(dirname(__FILE__) . "/includes/sensor_meteodegrees.php");
-		$flow_id = 8;
-		$sensor = new sensor_meteodegrees("meteo-degrees", $flow_id);
-		$data = $sensor->getCurrent();
-		$timestamp = $data[$action]["ts"];
-		
-		if ( $publish == true ) {
-			$mqtt->publish($timestamp, $data[$action]["temp"], "HTTP-get", "temperature");
-		}
-		
-		if ( $save == true ) {
-			$db->save($timestamp, $data[$action]["temp"], $flow_id);
-		}
-		output($data, JSON_FORCE_OBJECT);
-	break;
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_removeTrigger($actionSettings, $vars) {
+	$data = $vars['config']->removeTrigger($vars['trigger_id']);
+	output($data, null, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getData($actionSettings, $vars) {
+	$data = $vars['db']->getData($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
+	output($data, null, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getAverage($actionSettings, $vars) { ## only for integer
+	$data = $vars['db']->getAvg($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
+	output($data, null, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getMin($actionSettings, $vars) { ## only for integer
+	$data = $vars['db']->getMin($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
+	output($data, null, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getMax($actionSettings, $vars) { ## only for integer
+	$data = $vars['db']->getMax($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
+	output($data, null, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getEatingCPU($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_cpu.php");
+	$action = $vars['action'];
+	$flow_id = null;
+	$sensor = new sensor_cpu($vars['action'], $vars['flow_id']);
+	$data = $sensor->getCurrent($vars['limit']);
+	$timestamp = time();
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($timestamp, $data[$action]["value"], "guruplug", "cpu");
+		$data["published"] = true;
+	}
+
+	if ( $vars['save'] == true ) {
+		$vars['db']->save($timestamp, $data[$action]["value"], $vars['flow_id']);
+		$data["saved"] = true;
+	}
+	output($data, null, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getFreeSpace($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_freespace.php");
+	$action = $vars['action'];
+	$vars['flow_id'] = 2;
+	$sensor = new sensor_freespace($vars['action'], $vars['flow_id']);
+	$data = $sensor->getCurrent();
+	$timestamp = time();
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($timestamp, $data[$action]["value"], "guruplug", "freespace");
+		$data["published"] = true;
+	}
+
+	if ( $vars['save'] == true ) {
+		$vars['db']->save($timestamp, $data[$action]["value"], $vars['flow_id']);
+		$data["saved"] = true;
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_guruplugStarted($actionSettings, $vars) {
+	// TODO
+	// TODO
+	// TODO
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getMemory($actionSettings, $vars) {
+	ACTION_memoryUsage($actionSettings, $vars);
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_memoryUsage($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_memoryusage.php");
+	$action = $vars['action'];
+	$vars['flow_id'] = 4;
+	$sensor = new sensor_memoryusage($vars['action'], $vars['flow_id']);
+	$data = $sensor->getCurrent();
+	$timestamp = time();
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($timestamp, $data[$action]["value"], "guruplug", "memory_usage");
+		$data["published"] = true;
+	}
+
+	if ( $vars['save'] == true ) {
+		$vars['db']->save($timestamp, $data[$action]["value"], $vars['flow_id']);
+		$data["saved"] = true;
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getVOC($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_yoctovoc.php");
+	$action = $vars['action'];
+	$vars['flow_id'] = 5;
+	$sensor = new sensor_yoctovoc($action, $vars['flow_id']);
+	$data = $sensor->getCurrent();
+	$vars['timestamp'] = time();
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["currentValue"], "yoctovoc", "VOC");
+		$data["published"] = true;
+	}
+
+	if ( $vars['save'] == true ) {
+		$vars['db']->save($vars['timestamp'], $data[$action]["currentValue"], $vars['flow_id']);
+		$data["saved"] = true;
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getVirtualHub($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_virtualhub.php");
+	$action = $vars['action'];
+	$vars['flow_id'] = null;
+	$sensor = new sensor_virtualhub($vars['action'], $vars['flow_id']);
+	$data = $sensor->getCurrent(isset($_GET['serial'])?$_GET['serial']:"");
+	$vars['timestamp'] = time();
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], "value", "virtualhub", "name");
+		$data["published"] = true;
+	}
+
+	if ( $vars['save'] == true ) {
+		$vars['db']->save($vars['timestamp'], $data[$action], $vars['flow_id']);
+		$data["saved"] = true;
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param: 
+ * @return: 
+ */
+function ACTION_getTemp($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_meteodegrees.php");
+	$action = $vars['action'];
+	$vars['flow_id'] = 8;
+	$sensor = new sensor_meteodegrees($vars['action'], $vars['flow_id']);
+	$data = $sensor->getCurrent();
+	$vars['timestamp'] = $data[$action]["ts"];
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["temp"], "HTTP-get", "temperature");
+		$data["published"] = true;
+	}
+
+	if ( $vars['save'] == true ) {
+		$vars['db']->save($vars['timestamp'], $data[$action]["temp"], $vars['flow_id']);
+		$data["saved"] = true;
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
 }
 
 exit();
