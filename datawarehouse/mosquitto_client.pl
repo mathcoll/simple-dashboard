@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use FileHandle;
+use POSIX;
 use JSON qw( decode_json ); # libjson-perl
 use WebSphere::MQTT::Client; # perl -MCPAN -e "install WebSphere::MQTT::Client"
 
@@ -10,8 +11,7 @@ my %CFG = (
 	'MQTT_sub'				=> '/usr/bin/mosquitto_sub',
 	'MQTT_port'				=> 1883,
 	'MQTT_host'				=> 'guru',
-	'MQTT_topic'			=> '/couleurs/#',
-	#'MQTT_topic'			=> '/test/#',
+	'MQTT_topic'			=> '/#',
 	'MQTT_qos'				=> 2,
 	'MQTT_identifier'		=> 'trigger-client',
 	'MQTT_Clean_start'		=> 0,
@@ -44,10 +44,12 @@ $decoded = $decoded->{"getTriggers"};
 #use Data::Dumper;
 #print Dumper($decoded);
 
+
 my @triggers = ();
 foreach my $t ( @{ $decoded } ) {
 	push(@triggers, $t);
 }
+
 print "\t". @triggers . " TRIGGERS\n";
 
 # Connect to Broker
@@ -97,7 +99,10 @@ sub checkAllTriggers {
 	foreach my $trigger (@triggers) {
 		$trigger->{"previousTimestamp"} = defined($trigger->{"previousTimestamp"}) ? $trigger->{"previousTimestamp"} : 0;
 		
-		if ( defined($trigger->{"previousValue"}) ) {
+		if (
+			(defined($trigger->{"previousValue"}) && ( defined($trigger->{"minthreshold"}) || defined($trigger->{"maxthreshold"}) )) &&
+			(isdigit($trigger->{"previousValue"}) && ( isdigit($trigger->{"minthreshold"}) || isdigit($trigger->{"maxthreshold"}) ))
+		) {
 			if ( $trigger->{"previousValue"} > $trigger->{"minthreshold"} && # Argument "" isn't numeric in numeric lt (<)
 				 $trigger->{"previousValue"} < $trigger->{"maxthreshold"} ) {
 					$trigger->{"previousValueInside"} = 1;
@@ -109,6 +114,7 @@ sub checkAllTriggers {
 		$trigger->{"previousValueInside"} = defined($trigger->{"previousValueInside"}) ? $trigger->{"previousValueInside"} : 0;
 		#print $trigger->{"previousValueInside"}."<--\n";
 		
+		my $meta = decode_json($trigger->{"meta"});
 		if ( $topic =~ $trigger->{"topic"} && $timestamp ne $trigger->{"previousTimestamp"} ) {
 			my $eventTriggered = 0;
 			if (	$trigger->{"event"} eq "onUpper" &&
@@ -159,6 +165,18 @@ sub checkAllTriggers {
 					$trigger->{"previousValue"} > $value
 				) {
 					$eventTriggered = 1;
+			} elsif ( 
+					$trigger->{"event"} eq "onContain" &&
+					$meta->{"contains"} && 
+					$value =~ m/$meta->{"contains"}/gis
+				) {
+					$eventTriggered = 1;
+			} elsif ( 
+					$trigger->{"event"} eq "onNotContain" &&
+					$meta->{"notContains"} && 
+					$value !~ m/$meta->{"contains"}/gis
+				) {
+					$eventTriggered = 1;
 			}
 			
 			# ok, request action to be triggered
@@ -195,6 +213,7 @@ sub rtrim($) {
 
 sub callForAction {
 	my($event, $trigger_id, $timestamp, $value, $previousValue, $API_cli) = @_;
+	#print "$API_cli --action=triggerAction --trigger_id=$trigger_id --value=$value --previousValue=$previousValue --timestamp=$timestamp";
 	my $response = `$API_cli --action=triggerAction --trigger_id=$trigger_id --value=$value --previousValue=$previousValue --timestamp=$timestamp`;
 	return $response;
 }
