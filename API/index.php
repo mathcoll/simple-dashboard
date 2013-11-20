@@ -17,7 +17,7 @@ function output($data, $object=null, $actionSettings=null) {
 		print_r($data);
 	} else {
 		echo json_encode($data, $object);
-	}	
+	}
 }
 
 // Hack for old php versions to use boolval()
@@ -89,134 +89,144 @@ $vars['timestamp']			= @isset($_POST["timestamp"])?intval($_POST["timestamp"]):n
 $vars['trigger_id']			= @isset($_POST['trigger_id'])?intval($_POST['trigger_id']):@$_GET["trigger_id"];
 $vars['triggerAction']		= @isset($_POST["triggerAction"])?$_POST["triggerAction"]:"";
 $vars['unit_id']			= @isset($_POST["unit_id"])?intval($_POST["unit_id"]):"";
-$vars['sername']			= @isset($_POST["username"])?$_POST["username"]:"";
+$vars['username']			= @isset($_POST["username"])?$_POST["username"]:"";
 $vars['value']				= @isset($_POST["value"])?$_POST["value"]:"";
 
 $vars['actions'] = array(
 		"help" => array(
-			"name"			=> "help",
-			"description"	=> "Display help message and list enabled functions",
-			"parameters"	=> array(),
+				"name"			=> "help",
+				"description"	=> "Display help message and list enabled functions",
+				"parameters"	=> array(),
 		),
 		"test" => array(
-			"name"			=> "test",
-			"description"	=> "Test function ; do nothing",
-			"parameters"	=> array(),
+				"name"			=> "test",
+				"description"	=> "Test function ; do nothing",
+				"parameters"	=> array(),
 		),
 		"triggerAction" => array(
-			"name"			=> "triggerAction",
-			"description"	=> "activate a trigger",
-			"parameters"	=> array("trigger_id", "timestamp", "value", "previousValue"),
+				"name"			=> "triggerAction",
+				"description"	=> "activate a trigger",
+				"parameters"	=> array("trigger_id", "timestamp", "value", "previousValue"),
 		),
 		"addData" => array(
-			"name"			=> "addData",
-			"description"	=> "Add data to flow",
-			"parameters"	=> array("timestamp", "value", "flow_id"),
+				"name"			=> "addData",
+				"description"	=> "Add data to flow",
+				"parameters"	=> array("timestamp", "value", "flow_id"),
 		),
 		"setData" => array(
-			"name"			=> "setData",
-			"description"	=> "Add data to flow - addData Alias",
-			"parameters"	=> array("timestamp", "value", "flow_id"),
+				"name"			=> "setData",
+				"description"	=> "Add data to flow - addData Alias.",
+				"parameters"	=> array("timestamp", "value", "flow_id"),
 		),
 		"getDevices" => array(
-			"name"			=> "getDevices",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getDevices",
+				"description"	=> "Get device list from DB.",
+				"parameters"	=> array(),
 		),
 		"addDevice" => array(
-			"name"			=> "addDevice",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "addDevice",
+				"description"	=> "Add a new device to DB.",
+				"parameters"	=> array("username", "password", "name", "position", "ipv6", "ipv4"),
 		),
 		"getFlows" => array(
-			"name"			=> "getFlows",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getFlows",
+				"description"	=> "Get Flows from DB. if flow_id is defined, get the required flow and returns data from DB.",
+				"parameters"	=> array("flow_id"),
 		),
 		"addFlow" => array(
-			"name"			=> "addFlow",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "addFlow",
+				"description"	=> "Add a new flow to DB.",
+				"parameters"	=> array("name", "username", "password", "unit_id", "mqtt_topic", "data_type_id"),
 		),
 		"getDataTypes" => array(
-			"name"			=> "getDataTypes",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getDataTypes",
+				"description"	=> "Get Data Types from DB.",
+				"parameters"	=> array(),
 		),
 		"getUnits" => array(
-			"name"			=> "getUnits",
-			"description"	=> "Get units from DB",
-			"parameters"	=> array(),
+				"name"			=> "getUnits",
+				"description"	=> "Get units from DB.",
+				"parameters"	=> array(),
 		),
 		"getTriggers" => array(
-			"name"			=> "getTriggers",
-			"description"	=> "Get triggers from DB",
-			"parameters"	=> array(),
+				"name"			=> "getTriggers",
+				"description"	=> "Get triggers from DB.",
+				"parameters"	=> array(),
 		),
 		"addTrigger" => array(
-			"name"			=> "addTrigger",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "addTrigger",
+				"description"	=> "Add a new trigger to DB.",
+				"parameters"	=> array("username", "password", "meta", "flow_id", "maxthreshold", "name", "event", "triggerAction", "exitOnAlert", "logEventToFlow_id", "sort", "enable"),
 		),
 		"removeTrigger" => array(
-			"name"			=> "removeTrigger",
-			"description"	=> "Remove a trigger from DB",
-			"parameters"	=> array("trigger_id"),
+				"name"			=> "removeTrigger",
+				"description"	=> "Remove a trigger from DB.",
+				"parameters"	=> array("trigger_id"),
 		),
 		"getData" => array(
-			"name"			=> "getData",
-			"description"	=> "Get data from timeseries",
-			"parameters"	=> array("flow_id", "since"),
+				"name"			=> "getData",
+				"description"	=> "Get data from timeseries.",
+				"parameters"	=> array("flow_id", "since"),
 		),
 		"getAverage" => array(
-			"name"			=> "getAverage",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getAverage",
+				"description"	=> "",
+				"parameters"	=> array(),
 		),
 		"getMin" => array(
-			"name"			=> "getMin",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getMin",
+				"description"	=> "",
+				"parameters"	=> array(),
 		),
 		"getMax" => array(
-			"name"			=> "getMax",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getMax",
+				"description"	=> "",
+				"parameters"	=> array(),
 		),
 		"getEatingCPU" => array(
-			"name"			=> "getEatingCPU",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getEatingCPU",
+				"description"	=> "",
+				"parameters"	=> array(),
 		),
 		"getFreeSpace" => array(
-			"name"			=> "getFreeSpace",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getFreeSpace",
+				"description"	=> "",
+				"parameters"	=> array(),
 		),
 		"guruplugStarted" => array(
-			"name"			=> "guruplugStarted",
-			"description"	=> "Not yet implemented",
-			"parameters"	=> array(),
+				"name"			=> "guruplugStarted",
+				"description"	=> "Not yet implemented",
+				"parameters"	=> array(),
 		),
 		"getMemory" => array(
-			"name"			=> "getMemory",
-			"description"	=> "",
-			"parameters"	=> array(),
+				"name"			=> "getMemory",
+				"description"	=> "",
+				"parameters"	=> array(),
 		),
 		"getVOC" => array(
-			"name"			=> "getVOC",
-			"description"	=> "Get information from YoctoVOC Module",
-			"parameters"	=> array("serial"),
+				"name"			=> "getVOC",
+				"description"	=> "Get information from YoctoVOC Module",
+				"parameters"	=> array("serial"),
 		),
 		"getVirtualHub" => array(
-			"name"			=> "getVirtualHub",
-			"description"	=> "Get information from VirtualHub",
-			"parameters"	=> array("serial"),
+				"name"			=> "getVirtualHub",
+				"description"	=> "Get information from VirtualHub",
+				"parameters"	=> array("serial"),
 		),
 		"getTemp" => array(
-			"name"			=> "getTemp",
-			"description"	=> "Get current temperature from Yahoo feed",
-			"parameters"	=> array(),
+				"name"			=> "getTemp",
+				"description"	=> "Get current temperature from Yahoo feed",
+				"parameters"	=> array(),
+		),
+		"getFreebox" => array(
+				"name"			=> "getFreebox",
+				"description"	=> "Get data from Freebox device/rooter",
+				"parameters"	=> array(),
+		),
+		"checkNetwork" => array(
+				"name"			=> "checkNetwork",
+				"description"	=> "Check if IPv4 was found on the Local Area Network.",
+				"parameters"	=> array(),
 		),
 );
 
@@ -278,8 +288,8 @@ if( !$vars['action'] ) {
 
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_help($actionSettings, $vars) {
 	$action = $vars['action'];
@@ -288,14 +298,14 @@ function ACTION_help($actionSettings, $vars) {
 	foreach( $vars['actions'] as $function ) {
 		array_push($data[$action], $function);
 	}
-	
+
 	output($data, null, $actionSettings);
 	exit();
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_test($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_test.php");
@@ -313,8 +323,8 @@ function ACTION_test($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_triggerAction($actionSettings, $vars) {
 	$data = $vars['trigger']->triggerAction($vars['trigger_id'], $vars['timestamp'], $vars['value'], $vars['previousValue']);
@@ -323,16 +333,16 @@ function ACTION_triggerAction($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_setData($actionSettings, $vars) {
 	ACTION_addData($actionSettings, $vars);
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_addData($actionSettings, $vars) {
 	$data = $vars['db']->setData($vars['timestamp'], $vars['value'], $vars['flow_id']);
@@ -341,8 +351,8 @@ function ACTION_addData($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getDevices($actionSettings, $vars) {
 	$data = $vars['config']->getDevices();
@@ -351,8 +361,8 @@ function ACTION_getDevices($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_addDevice($actionSettings, $vars) {
 	$data = $vars['config']->addDevice($vars['username'], $vars['password'], $vars['name'], $vars['position'], $vars['ipv6'], $vars['ipv4']);
@@ -361,8 +371,8 @@ function ACTION_addDevice($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getFlows($actionSettings, $vars) {
 	$data = $vars['config']->getFlows($vars['flow_id']);
@@ -377,24 +387,24 @@ function ACTION_getFlows($actionSettings, $vars) {
  * @param: integer $unit_id
  * @param: string $mqtt_topic
  * @param: integer $data_type_id
- * @return: 
+ * @return:
  */
 function ACTION_addFlow($actionSettings, $vars) {
 	$data = $vars['config']->addFlow(
-		$vars['name'],
-		$vars['username'],
-		$vars['password'],
-		$vars['unit_id'],
-		$vars['mqtt_topic'],
-		$vars['data_type_id']
+			$vars['name'],
+			$vars['username'],
+			$vars['password'],
+			$vars['unit_id'],
+			$vars['mqtt_topic'],
+			$vars['data_type_id']
 	);
 	output($data, null, $actionSettings);
 	exit();
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getDataTypes($actionSettings, $vars) {
 	$data = $vars['config']->getDataTypes();
@@ -403,8 +413,8 @@ function ACTION_getDataTypes($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getUnits($actionSettings, $vars) {
 	$data = $vars['config']->getUnits();
@@ -413,8 +423,8 @@ function ACTION_getUnits($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getTriggers($actionSettings, $vars) {
 	$data = $vars['config']->getTriggers($vars['trigger_id'], $vars['filter_enable']);
@@ -423,31 +433,31 @@ function ACTION_getTriggers($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_addTrigger($actionSettings, $vars) {
 	$data = $vars['config']->addTrigger(
-		$vars['username'],
-		$vars['password'],
-		$vars['meta'],
-		$vars['flow_id'],
-		$vars['maxthreshold'],
-		$vars['name'],
-		$vars['event'],
-		$vars['triggerAction'],
-		$vars['exitOnAlert'],
-		$vars['logEventToFlow_id'],
-		$vars['sort'],
-		$vars['enable']
+			$vars['username'],
+			$vars['password'],
+			$vars['meta'],
+			$vars['flow_id'],
+			$vars['maxthreshold'],
+			$vars['name'],
+			$vars['event'],
+			$vars['triggerAction'],
+			$vars['exitOnAlert'],
+			$vars['logEventToFlow_id'],
+			$vars['sort'],
+			$vars['enable']
 	);
 	output($data, null, $actionSettings);
 	exit();
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_removeTrigger($actionSettings, $vars) {
 	$data = $vars['config']->removeTrigger($vars['trigger_id']);
@@ -456,8 +466,8 @@ function ACTION_removeTrigger($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getData($actionSettings, $vars) {
 	$data = $vars['db']->getData($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
@@ -466,8 +476,8 @@ function ACTION_getData($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getAverage($actionSettings, $vars) { ## only for integer
 	$data = $vars['db']->getAvg($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
@@ -476,8 +486,8 @@ function ACTION_getAverage($actionSettings, $vars) { ## only for integer
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getMin($actionSettings, $vars) { ## only for integer
 	$data = $vars['db']->getMin($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
@@ -486,8 +496,8 @@ function ACTION_getMin($actionSettings, $vars) { ## only for integer
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getMax($actionSettings, $vars) { ## only for integer
 	$data = $vars['db']->getMax($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
@@ -496,8 +506,8 @@ function ACTION_getMax($actionSettings, $vars) { ## only for integer
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getEatingCPU($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_cpu.php");
@@ -521,8 +531,8 @@ function ACTION_getEatingCPU($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getFreeSpace($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_freespace.php");
@@ -546,8 +556,8 @@ function ACTION_getFreeSpace($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_guruplugStarted($actionSettings, $vars) {
 	// TODO
@@ -558,16 +568,16 @@ function ACTION_guruplugStarted($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getMemory($actionSettings, $vars) {
 	ACTION_memoryUsage($actionSettings, $vars);
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_memoryUsage($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_memoryusage.php");
@@ -591,8 +601,8 @@ function ACTION_memoryUsage($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getVOC($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_yoctovoc.php");
@@ -616,8 +626,8 @@ function ACTION_getVOC($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getVirtualHub($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_virtualhub.php");
@@ -641,8 +651,8 @@ function ACTION_getVirtualHub($actionSettings, $vars) {
 }
 
 /**
- * @param: 
- * @return: 
+ * @param:
+ * @return:
  */
 function ACTION_getTemp($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_meteodegrees.php");
@@ -661,6 +671,70 @@ function ACTION_getTemp($actionSettings, $vars) {
 		$vars['db']->save($vars['timestamp'], $data[$action]["temp"], $vars['flow_id']);
 		$data["saved"] = true;
 	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param:
+ * @return:
+ */
+function ACTION_getFreebox($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_freebox.php");
+	$action = $vars['action'];
+	$vars['flow_id'] = array(10,11,12,13,14,15, 16, 17, 18, 19);
+	$sensor = new sensor_freebox($action, $vars['flow_id']);
+	$data = $sensor->getCurrent(isset($_GET['serial'])?$_GET['serial']:"");
+	$vars['timestamp'] = time();
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["upfec"], "Freebox", "FECup");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downfec"], "Freebox", "FECdown");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["uphec"], "Freebox", "HECup");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downhec"], "Freebox", "HECdown");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["upcrc"], "Freebox", "CRCup");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downcrc"], "Freebox", "CRCdown");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downrate"], "Freebox", "ATMup");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["uprate"], "Freebox", "ATMdown");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["upmargin"], "Freebox", "marginUp");
+		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downmargin"], "Freebox", "marginDown");
+		$data["published"] = true;
+	}
+
+	if ( $vars['save'] == true ) {
+		$vars['db']->save($vars['timestamp'], $data[$action]["downfec"], $vars['flow_id'][0]); //10
+		$vars['db']->save($vars['timestamp'], $data[$action]["upfec"], $vars['flow_id'][1]); //11
+		$vars['db']->save($vars['timestamp'], $data[$action]["downhec"], $vars['flow_id'][2]); //12
+		$vars['db']->save($vars['timestamp'], $data[$action]["uphec"], $vars['flow_id'][3]); //13
+		$vars['db']->save($vars['timestamp'], $data[$action]["downcrc"], $vars['flow_id'][4]); //14
+		$vars['db']->save($vars['timestamp'], $data[$action]["upcrc"], $vars['flow_id'][5]); //15
+		$vars['db']->save($vars['timestamp'], $data[$action]["downrate"], $vars['flow_id'][6]); //16
+		$vars['db']->save($vars['timestamp'], $data[$action]["uprate"], $vars['flow_id'][7]); //17
+		$vars['db']->save($vars['timestamp'], $data[$action]["downmargin"], $vars['flow_id'][8]); //18
+		$vars['db']->save($vars['timestamp'], $data[$action]["upmargin"], $vars['flow_id'][9]); //19
+		$data["saved"] = true;
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param:
+ * @return:
+ */
+function ACTION_checkNetwork($actionSettings, $vars) {
+	require(dirname(__FILE__) . "/includes/sensor_networkcheck.php");
+	$action = $vars['action'];
+	$vars['flow_id'] = null;
+	$sensor = new sensor_networkcheck($vars['action'], $vars['flow_id']);
+	$data = $sensor->getCurrent($vars['ipv4']);
+	$vars['timestamp'] = time();
+
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], $vars['ipv4'].":".$data[$action]["value"], "guruplug", "checkNetwork");
+		$data["published"] = true;
+	}
+	
 	output($data, JSON_FORCE_OBJECT, $actionSettings);
 	exit();
 }
