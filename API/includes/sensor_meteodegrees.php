@@ -7,30 +7,30 @@ class sensor_meteodegrees extends sensor {
 	public $city_code = "55863454";
 	public $unit = "c";
 	public $url = "http://weather.yahooapis.com/forecastrss?w=%d&u=%s";
-		
+
 	function __construct($actionName, $flow_id) {
 		// flow_id=8
 		$this->actionName	= $actionName;
 		$this->flow_id		= $flow_id;
 		$this->url			= sprintf("http://weather.yahooapis.com/forecastrss?w=%d&u=%s", $this->city_code, $this->unit);
 	}
-	
-    public function getCurrent() {
-    	$bf = new BlogFeed($this->url);
 
-    	$data[$this->actionName] = array(
-			'city'		=> $bf->getCity(0),
-			'city_code'	=> $this->city_code,
-			'country'	=> $bf->getCountry(0),
-			'link'		=> $bf->getLink(0),
-			'unit'		=> $this->unit,
-			'url'		=> $this->url,
-			'temp'		=> $bf->getTemp(0),
-			'text'		=> $bf->getText(0),
-			'ts'		=> $bf->getTs(0)
-    	);
+	public function getCurrent() {
+		$bf = new BlogFeed($this->url);
+
+		$data[$this->actionName] = array(
+				'city'		=> $bf->getCity(0),
+				'city_code'	=> $this->city_code,
+				'country'	=> $bf->getCountry(0),
+				'link'		=> $bf->getLink(0),
+				'unit'		=> $this->unit,
+				'url'		=> $this->url,
+				'temp'		=> $bf->getTemp(0),
+				'text'		=> $bf->getText(0),
+				'ts'		=> $bf->getTs(0)
+		);
 		return $data;
-    }
+	}
 }
 
 

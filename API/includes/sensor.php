@@ -4,7 +4,7 @@ class sensor {
 	public $errorType;
 	public $result;
 	public $data;
-	
+
 	function __construct() {
 		$this->errorType = 0;
 		$this->result = 0;
