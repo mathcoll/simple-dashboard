@@ -10,8 +10,15 @@ class sensor_memoryusage extends sensor {
 		$this->flow_id		= $flow_id;
 	}
 
-	public function getCurrent() {
-		$exec = "ps aux | awk '{sum +=$4}; END {print sum}'";
+	public function getCurrent($field="mem") {
+		switch ($field) {
+			case "cpu":
+				$exec = "ps aux | awk '{sum +=$3}; END {print sum}'";
+				break;
+			default: 
+			case "mem":
+				$exec = "ps aux | awk '{sum +=$4}; END {print sum}'";
+		}
 		exec($exec, $out, $result);
 		if ( $result == 0 ) {
 			$this->result = isset($out[0])?$out[0]:0;
