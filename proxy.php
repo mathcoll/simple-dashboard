@@ -17,7 +17,7 @@ if(isValidURL($_GET['url'])){
 	);
 
 	$context = stream_context_create($opts);
-	if ( !$read = file_get_contents(urlencode($_GET['url']), false, $context) ) {
+	if ( !$read = file_get_contents($_GET['url'], false, $context) ) {
 		echo $_GET['url'];
 	} else {
 		echo $read;

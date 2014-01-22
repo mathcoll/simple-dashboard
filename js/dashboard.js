@@ -17,11 +17,11 @@ $(function(){
 		}
 	}).data('gridster');
 	
-	$.fn.peity.defaults.pie = {
-		colours: ["#cecece", "#fff4dd", "#ffd592", "#c6d9fd", "#4d89f9"],
-		spacing: devicePixelRatio || 1,
-		strokeWidth: 1
-	}
+	//$.fn.peity.defaults.pie = {
+		//colours: ["#cecece", "#fff4dd", "#ffd592", "#c6d9fd", "#4d89f9"],
+		//spacing: devicePixelRatio || 1,
+		//strokeWidth: 1
+	//}
 	//$.fn.peity.defaults.bar = {}
 
 	currentVOC();
@@ -30,8 +30,9 @@ $(function(){
 	guruplugRootAccess();
 	guruplugSpace();
 	guruplugEatingCPU();
-	guruplugEvents();
+	LTC();
 	horloge();
+	RunningProcess();
 });
 
 
@@ -52,7 +53,7 @@ function VOCs() {
 		$("li.VOCs h1, li.VOCs h2, li.VOCs h3, li.VOCs h4, li.VOCs h5, li.VOCs div, li.VOCs p").remove();
 		$("li.VOCs").append("<h1>Yocto VOC Module</h1>");
 		var n=2;
-		getVOCs = getVOCs.getData;
+		getVOCs = getVOCs.getData.values;
 		//console.log(getVOCs);
 		$.each(getVOCs, function(key, value){
 			$("li.VOCs").append("<h"+n+" class='value'>"+getVOCs[n-2][1]+"<span>ppm</span></h"+n+">");
@@ -62,8 +63,8 @@ function VOCs() {
 	setTimeout("VOCs()", 7*60*1000);
 }
 function guruplugMemory() {
-	$.getJSON("http://app.internetcollaboratif.info/API/?action=getData&flow_id=4&since=1h", function(getMemory) {
-		getMemory = getMemory.getData;
+	$.getJSON("http://app.internetcollaboratif.info/API/?action=getData&flow_id=4&since=1h&limit=1", function(getMemory) {
+		getMemory = getMemory.getData.values;
 		$("li.guruplugMemory h1, li.guruplugMemory h2, li.guruplugMemory div, li.guruplugMemory p").remove();
 		$("li.guruplugMemory").append("<h1>GuruPlug Memory Usage</h1>");
 		$("li.guruplugMemory").append("<input class='knobMemory' data-min='0' data-max='120' data-width='180' data-fgColor='#cecece' data-angleOffset='-150' data-angleArc='300' data-thickness='.4' data-readOnly='true' value='"+getMemory[0][1]+"' />");
@@ -76,7 +77,7 @@ function guruplugMemory() {
 
 function guruplugSpace() {
 	$.getJSON("http://app.internetcollaboratif.info/API/?action=getData&flow_id=2&since=1h", function(getSpace) {
-		getSpace = getSpace.getData;
+		getSpace = getSpace.getData.values;
 		$("li.guruplugSpace h1, li.guruplugSpace h2, li.guruplugSpace h3, li.guruplugSpace div, li.guruplugSpace p").remove();
 		$("li.guruplugSpace").append("<h1>Free space left on Nand</h1>");
 		$("li.guruplugSpace").append("<h3 class='value'>"+Math.round(getSpace[0][1]/1024)+" <span>Mo</span></h3>");
@@ -87,7 +88,7 @@ function guruplugSpace() {
 
 function guruplugRootAccess() {
 	$.getJSON("http://app.internetcollaboratif.info/API/?action=getData&flow_id=1&since=20d", function(getFailedRoot) {
-		getFailedRoot = getFailedRoot.getData.reverse();
+		getFailedRoot = getFailedRoot.getData.values.reverse();
 		$("li.guruplugRootAccess h1, li.guruplugRootAccess h2, li.guruplugRootAccess div, li.guruplugRootAccess p").remove();
 		$("li.guruplugRootAccess").append("<h1>Failed Root Access</h1>");
 		$("li.guruplugRootAccess").append("<h2>Number of Failed Root Attempts</h2>");
@@ -98,7 +99,7 @@ function guruplugRootAccess() {
 			rootAccess += getFailedRoot[key][1] + ",";
 			sum += parseInt(getFailedRoot[key][1]);
 			var d = new Date(parseInt(getFailedRoot[key][0]));
-			dayOfWeeks += "<span>"+days[d.getDay()]+"</span>";
+			dayOfWeeks += "<span title='"+getFailedRoot[key][1]+"'>"+days[d.getDay()]+"</span>";
 		});
 		$("li.guruplugRootAccess").append("<span class='bar'>"+rootAccess.substring(0, (rootAccess.length)-1)+"</span></h3>");
 
@@ -110,7 +111,8 @@ function guruplugRootAccess() {
 			height: dim-100,
 			spacing: margin,
 			colours: ["#cecece"],
-			strokeColour: "#ffd592",
+			strokeColour: "#cecece",
+			fill: ["#cecece"],
 			strokeWidth: 1
 		});
 	});
@@ -149,7 +151,7 @@ function guruplugEatingCPU() {
 	$.get("http://app.internetcollaboratif.info/API/?action=getEatingCPU&limit="+limit, function(eatingCPU) {
 		eatingCPU = eatingCPU.getEatingCPU.value;
 		
-		$("li.memoryPie canvas, li.memoryPie h1, li.memoryPie h2, li.memoryPie div, li.memoryPie p, li.memoryPie span.pie").remove();
+		$("li.memoryPie canvas, li.memoryPie span, li.memoryPie h1, li.memoryPie h2, li.memoryPie div, li.memoryPie p, li.memoryPie svg").remove();
 		$("li.guruplugEatingCPU h1, li.guruplugEatingCPU h2, li.guruplugEatingCPU div, li.guruplugEatingCPU p, li.guruplugEatingCPU ul").remove();
 
 		$("li.memoryPie").append("<h1>GuruPlug Memory</h1>");
@@ -162,7 +164,7 @@ function guruplugEatingCPU() {
 			memory += mem[0] + ",";
 			liste += "<li>" + eatingCPU[key] + "</li>\n";
 		});
-		
+
 		$("li.memoryPie").append("<span class='pie' data-diameter='200'>"+memory.substring(0, (memory.length)-1)+"</span></h3>");
 		$("li.memoryPie").append("<h2>%</h2>");
 		$("li.memoryPie").append("<p class='updated-at'>"+displayTime()+"</p>");
@@ -175,9 +177,33 @@ function guruplugEatingCPU() {
 	setTimeout("guruplugEatingCPU()", 2*60*1000);
 }
 
-function guruplugEvents() {
-	$("li.guruplugEvents").append("<h1>GuruPlug Events</h1>");
-	$("li.guruplugEvents").append("<p class='updated-at'>"+displayTime()+"</p>");
+function LTC() {
+	$("li.LTC h1, li.LTC h2, li.LTC p").remove();
+	$("li.LTC").append("<h1>SMP-FR LTC pool</h1>");
+	$.getJSON("/proxy.php?url=http://ltc.ouranos.fr/api2?api_key=4cd138df7a81c1d6336326b67503433e3609edc3c190edd05720c848c4c84126", function(ltc) {
+		$("li.LTC").append("<h2>"+ltc.username+"</h2>");
+		$("li.LTC").append("<p>Rewards: "+Math.round(ltc.confirmed_rewards*1000000000)/1000000000+" LTC</p>");
+		$("li.LTC").append("<p>Round Shares: "+ltc.round_shares+"</p>");
+		$.each(ltc.workers, function(key, value){
+			$("li.LTC").append("<h1>"+key+"</h1>");
+			$("li.LTC").append("<p>Alive: "+value.alive+"</p>");
+			$("li.LTC").append("<p>Hashrate: "+value.hashrate+"</p>");
+		});
+	});
+	$("li.LTC").append("<p class='updated-at'>"+displayTime()+"</p>");
+	setTimeout("LTC()", 2*60*1000);
+}
+
+function RunningProcess() {
+	$("li.RunningProcess h1, li.RunningProcess div, li.RunningProcess p").remove();
+	$("li.RunningProcess").append("<h1>Running Process</h1>");
+	$.getJSON("http://app.internetcollaboratif.info/API/?action=getRunningProcess", function(getRunningProcess) {
+		$.each(getRunningProcess.getRunningProcess.process, function(key, value){
+			$("li.RunningProcess").append("<div style='font-size:.8em;clear: both;' title='proc="+value.proc+"'><span style='float:left'>"+value.name+"</span><span style='float:right'>"+value.pid+"</span></div>");
+		});
+	});
+	$("li.RunningProcess").append("<p class='updated-at'>"+displayTime()+"</p>");
+	setTimeout("RunningProcess()", 10*60*1000);
 }
 
 function secondstotime(secs) {
@@ -213,19 +239,24 @@ function two(x) {return ((x>9)?"":"0")+x}
 function three(x) {return ((x>99)?"":"0")+((x>9)?"":"0")+x}
 
 
-function displayTime(ts=null) {
-	if ( ts ) {
+function displayTime(ts) {
+	if ( ts > 0 ) {
 		var currentTime	= new Date(ts);
 	} else {
 		var currentTime	= new Date();
 	}
 	
-	var month		= currentTime.getMonth() + 1;
 	var day			= currentTime.getDate();
+	var month		= currentTime.getMonth() + 1;
 	var year		= currentTime.getFullYear();
 	var hours		= currentTime.getHours();
 	var minutes		= currentTime.getMinutes();
-	
+	if ( day < 10 ) {
+		day	= "0"+day;
+	}
+	if ( month < 10 ) {
+		month	= "0"+month;
+	}
 	if ( minutes < 10 ) {
 		minutes	= "0"+minutes;
 	}
