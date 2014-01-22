@@ -72,15 +72,34 @@ class db {
 		return $this->data;
 	}
 
-	public function getData($since=null, $sinceTimestamp=null, $flow_id=null) {
+	public function getData($since=null, $sinceTimestamp=null, $flow_id=null, $limit=null) {
+		$this->data["getData"] = array();
 		if ( !$flow_id || !$sinceTimestamp || !$since ) {
 			$this->data["getData"] = array("status" => "error", "message" => "Mandatory input data missing.");
 		} else {
-			$q = sprintf("SELECT timestamp, value FROM data WHERE flow_id=%d AND timestamp >= %d ORDER BY timestamp DESC", $flow_id, $sinceTimestamp);
+			
+			$q = sprintf("SELECT data.timestamp, data.value, users.prenom, users.nom, flows.mqtt_topic, metas.value AS title
+					FROM data 
+					JOIN flows ON (data.flow_id = flows.flow_id)
+					JOIN users ON (flows.user_id = users.user_id)
+					JOIN metas ON (metas.element_id = flows.flow_id)
+					WHERE data.flow_id=%d AND data.timestamp >= %d AND metas.name='flow_name'
+					ORDER BY data.timestamp DESC", $flow_id, $sinceTimestamp);
+
+			//$q = sprintf("SELECT timestamp, value FROM data WHERE flow_id=%d AND timestamp >= %d ORDER BY timestamp DESC", $flow_id, $sinceTimestamp);
+			if( isset($limit) && intval($limit) > 0 ) $q .= " LIMIT ".$limit;
 			//print $q;
+
 			foreach ($this->dbh->query($q) as $row) {
-				$this->data["getData"][]=array($row['timestamp']."000", $row['value']);
+				$this->data["getData"]["values"][]=array($row['timestamp']."000", $row['value']);
+				$author = join(" ", array($row['prenom'], $row['nom']));
+				$mqtt_topic = $row['mqtt_topic'];
+				$title = $row['title'];
 			}
+
+			$this->data["getData"]["author"]		= @$author;
+			$this->data["getData"]["mqtt_topic"]	= @$mqtt_topic;
+			$this->data["getData"]["title"]			= @$title;
 		}
 		return $this->data;
 	}
