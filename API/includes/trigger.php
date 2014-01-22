@@ -83,10 +83,12 @@ class trigger {
 							);
 							exec($command, $out, $result);
 							if ( $result == 0 ) {
-								$this->data = array("status" => "ok", "message" => $command);
+								$this->data[0]["status"] = "ok";
+								$this->data[0]["message"] = $command;
 								return $this->data;
 							} else {
-								$this->data = array("status" => "error", "message" => $command);
+								$this->data[0]["status"] = "error";
+								$this->data[0]["message"] = $command;
 								return $this->data;
 							}
 
