@@ -68,6 +68,7 @@ $vars['enable']				= @isset($_POST["enable"])?intval($_POST["enable"]):"";
 $vars['event']				= @isset($_POST["event"])?$_POST["event"]:"";
 $vars['exitOnAlert']		= @isset($_POST["exitOnAlert"])?intval($_POST["exitOnAlert"]):"";
 $vars['filter_enable']		= @isset($_POST["filter_enable"])?@$_POST["filter_enable"]:@$_GET["filter_enable"];
+$vars['formatdate']			= @isset($_POST["formatdate"])?$_POST["formatdate"]:@isset($_GET["formatdate"])?$_GET["formatdate"]:"unixepoch";
 $vars['flow_id']			= @isset($_GET['flow_id'])?$_GET['flow_id']:null;
 $vars['height']				= @isset($_POST["height"])?$_POST["height"]:"";
 $vars['ipv4']				= @isset($_POST["ipv4"])?$_POST["ipv4"]:@$_GET["ipv4"];
@@ -107,15 +108,15 @@ $vars['actions'] = array(
 				"description"	=> "Test function ; do nothing",
 				"parameters"	=> array(),
 		),
-		"triggerAction" => array(
-				"name"			=> "triggerAction",
-				"description"	=> "activate a trigger",
-				"parameters"	=> array("trigger_id", "timestamp", "value", "previousValue"),
-		),
 		"addData" => array(
 				"name"			=> "addData",
 				"description"	=> "Add data to flow",
 				"parameters"	=> array("timestamp", "value", "flow_id"),
+		),
+		"addTrigger" => array(
+				"name"			=> "addTrigger",
+				"description"	=> "Add a new trigger to DB.",
+				"parameters"	=> array("username", "password", "meta", "flow_id", "maxthreshold", "name", "event", "triggerAction", "exitOnAlert", "logEventToFlow_id", "sort", "enable"),
 		),
 		"setData" => array(
 				"name"			=> "setData",
@@ -161,16 +162,6 @@ $vars['actions'] = array(
 				"name"			=> "getTriggers",
 				"description"	=> "Get triggers from DB.",
 				"parameters"	=> array(),
-		),
-		"addTrigger" => array(
-				"name"			=> "addTrigger",
-				"description"	=> "Add a new trigger to DB.",
-				"parameters"	=> array("username", "password", "meta", "flow_id", "maxthreshold", "name", "event", "triggerAction", "exitOnAlert", "logEventToFlow_id", "sort", "enable"),
-		),
-		"removeTrigger" => array(
-				"name"			=> "removeTrigger",
-				"description"	=> "Remove a trigger from DB.",
-				"parameters"	=> array("trigger_id"),
 		),
 		"getData" => array(
 				"name"			=> "getData",
@@ -246,6 +237,21 @@ $vars['actions'] = array(
 				"name"			=> "getImage",
 				"description"	=> "Get gnuplot image from a flow.",
 				"parameters"	=> array("flow_id", "since", "width", "height"),
+		),
+		"removeTrigger" => array(
+				"name"			=> "removeTrigger",
+				"description"	=> "Remove a trigger from DB.",
+				"parameters"	=> array("trigger_id"),
+		),
+		"triggerAction" => array(
+				"name"			=> "triggerAction",
+				"description"	=> "activate a trigger",
+				"parameters"	=> array("trigger_id", "timestamp", "value", "previousValue"),
+		),
+		"updateTrigger" => array(
+				"name"			=> "updateTrigger",
+				"description"	=> "activate or disable a trigger",
+				"parameters"	=> array("trigger_id"),
 		),
 );
 
@@ -514,7 +520,7 @@ function ACTION_removeTrigger($actionSettings, $vars) {
  * @return:
  */
 function ACTION_getData($actionSettings, $vars) {
-	$data = $vars['db']->getData($vars['since'], $vars['sinceTimestamp'], $vars['flow_id'], $vars['limit']);
+	$data = $vars['db']->getData($vars['since'], $vars['sinceTimestamp'], $vars['flow_id'], $vars['limit'], $vars['formatdate']);
 	output($data, null, $actionSettings);
 	exit();
 }
@@ -897,6 +903,25 @@ function ACTION_checkNetwork($actionSettings, $vars) {
 		}
 	}
 	
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param:
+ * @return:
+ */
+function ACTION_updateTrigger($actionSettings, $vars) {
+	$vars['value'] = $vars['value']==1?1:0;
+	if ( isset($vars['trigger_id']) ) {
+		if ( $vars['value'] == 1 ) {
+			$data = $vars['trigger']->enable($vars['trigger_id']);
+		} else {
+			$data = $vars['trigger']->disable($vars['trigger_id']);
+		}
+	} else {
+		$this->data = array("status" => "error", "message" => "trigger_id cannot be updated due to wrong 'value'.");
+	}
 	output($data, JSON_FORCE_OBJECT, $actionSettings);
 	exit();
 }

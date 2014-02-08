@@ -9,6 +9,34 @@ class trigger {
 		$this->db = new db(dirname(__FILE__) . "/../../data/dashboard.db");
 	}
 
+	function enable($trigger_id) {
+		if ( isset($trigger_id) ) {
+			$q = sprintf("UPDATE triggers SET enable=1 WHERE trigger_id = %d LIMIT 1", $trigger_id);
+			if ( $this->db->exec($q) ) {
+				$this->data = array("status" => "ok", "trigger_id" => $trigger_id);
+			} else {
+				$this->data = array("status" => "error", "message" => $this->db->errorInfo());
+			}
+		} else {
+			$this->data = array("status" => "error", "message" => "trigger_id is missing");
+		}
+		return $this->data;
+	}
+
+	function disable($trigger_id) {
+		if ( isset($trigger_id) ) {
+			$q = sprintf("UPDATE triggers SET enable=0 WHERE trigger_id = %d LIMIT 1", $trigger_id);
+			if ( $this->db->exec($q) ) {
+				$this->data = array("status" => "ok", "trigger_id" => $trigger_id);
+			} else {
+				$this->data = array("status" => "error", "message" => $this->db->errorInfo());
+			}
+		} else {
+			$this->data = array("status" => "error", "message" => "trigger_id is missing");
+		}
+		return $this->data;
+	}
+
 	public function triggerAction($trigger_id, $timestamp, $value, $previousValue) {
 		$this->value = $value;
 		$this->previousValue = $previousValue;
