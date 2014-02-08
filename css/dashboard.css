@@ -74,6 +74,10 @@ div#meteo-degrees {
 	font-size: .8em;
 }
 
+.ready .gs-w:not(.preview-holder), .ready .resize-preview-holder {
+	border-radius: 0.3em;
+}
+
 div.gridster ul li.gs_w {
 	/*border: 1px solid #666;*/
 	box-shadow: -1px 2px 5px 1px rgba(0, 0, 0, 0.7), -1px 2px 20px
@@ -1556,8 +1560,13 @@ html {
 body {
 	margin: 0;
 	background-color: #222222;
-	font-size: 20px;
+	font-size: 1.2em;
 	color: white;
+	width:10em;
+}
+
+body div.container {
+	width:10em;
 }
 
 b,strong {
@@ -1604,7 +1613,7 @@ h1,h2,h3,h4,h5,p {
 }
 
 h1.value span,h2.value span {
-	font-size: 28px;
+	font-size: .4em;
 	text-transform: none;
 	vertical-align: super;
 }
@@ -1630,11 +1639,12 @@ h5.value span {
 h1 {
 	color: rgba(255, 255, 255, 0.7);
 	background: rgba(128, 128, 128, 0.3);
-	font-size: 20px;
+	font-size: .7em;
 	font-weight: 400;
 	margin-bottom: 5px;
 	text-align: center;
 	padding: 5px;
+	cursor:move;
 }
 
 h2 {
@@ -1646,7 +1656,7 @@ h2 {
 }
 
 h2.value {
-	font-size: 76px;
+	font-size: 3.5em;
 	margin-bottom: 8px;
 }
 
@@ -1658,7 +1668,7 @@ h3 {
 }
 
 h3.value {
-	font-size: 46px;
+	font-size: 2.3em;
 	margin-bottom: 8px;
 }
 
@@ -1670,7 +1680,7 @@ h4 {
 }
 
 h4.value {
-	font-size: 26px;
+	font-size: 1.1em;
 	margin-bottom: 8px;
 }
 

@@ -2,7 +2,9 @@ var margin = 7;
 var cols = 4;
 var dim = Math.round((($(window).width()/cols)-((cols-1)*margin)));
 var gridster;
-var days = new Array("D", "L", "M", "M", "J", "V", "S");
+var days = new Array("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi");
+var s_days = new Array("Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam.");
+var xs_days = new Array("D", "L", "M", "M", "J", "V", "S");
 var months = new Array("Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre");
 var s_months = new Array("Jan.", "Fév.", "Mar.", "Avr.", "Mai", "Jui.", "Juil.", "Aoû.", "Sept.", "Oct.", "Nov.", "Déc.");
 
@@ -99,7 +101,7 @@ function guruplugRootAccess() {
 			rootAccess += getFailedRoot[key][1] + ",";
 			sum += parseInt(getFailedRoot[key][1]);
 			var d = new Date(parseInt(getFailedRoot[key][0]));
-			dayOfWeeks += "<span title='"+getFailedRoot[key][1]+"'>"+days[d.getDay()]+"</span>";
+			dayOfWeeks += "<span title='"+s_days[d.getDay()]+" : "+getFailedRoot[key][1]+"'>"+xs_days[d.getDay()]+"</span>";
 		});
 		$("li.guruplugRootAccess").append("<span class='bar'>"+rootAccess.substring(0, (rootAccess.length)-1)+"</span></h3>");
 
@@ -147,7 +149,7 @@ function horloge() {
 }
 
 function guruplugEatingCPU() {
-	var limit = 8;
+	var limit = 9;
 	$.get("http://app.internetcollaboratif.info/API/?action=getEatingCPU&limit="+limit, function(eatingCPU) {
 		eatingCPU = eatingCPU.getEatingCPU.value;
 		
@@ -162,7 +164,7 @@ function guruplugEatingCPU() {
 		$.each(eatingCPU, function(key, value){
 			var mem = eatingCPU[key].split(" ");
 			memory += mem[0] + ",";
-			liste += "<li>" + eatingCPU[key] + "</li>\n";
+			liste += "<li style='padding:.1em;border:0;'>" + eatingCPU[key].substring(0, 90) + "</li>\n";
 		});
 
 		$("li.memoryPie").append("<span class='pie' data-diameter='200'>"+memory.substring(0, (memory.length)-1)+"</span></h3>");
@@ -170,7 +172,7 @@ function guruplugEatingCPU() {
 		$("li.memoryPie").append("<p class='updated-at'>"+displayTime()+"</p>");
 		$("li.guruplugEatingCPU").append("<p class='updated-at'>"+displayTime()+"</p>");
 		
-		$("li.guruplugEatingCPU").append("<ul>"+liste+"</ul>");
+		$("li.guruplugEatingCPU").append("<ul style='padding:.5em;'>"+liste+"</ul>");
 		$("li.memoryPie span.pie").peity("pie");
 	});
 	
@@ -178,17 +180,23 @@ function guruplugEatingCPU() {
 }
 
 function LTC() {
-	$("li.LTC h1, li.LTC h2, li.LTC p").remove();
-	$("li.LTC").append("<h1>SMP-FR LTC pool</h1>");
-	$.getJSON("/proxy.php?url=http://ltc.ouranos.fr/api2?api_key=4cd138df7a81c1d6336326b67503433e3609edc3c190edd05720c848c4c84126", function(ltc) {
-		$("li.LTC").append("<h2>"+ltc.username+"</h2>");
-		$("li.LTC").append("<p>Rewards: "+Math.round(ltc.confirmed_rewards*1000000000)/1000000000+" LTC</p>");
-		$("li.LTC").append("<p>Round Shares: "+ltc.round_shares+"</p>");
-		$.each(ltc.workers, function(key, value){
-			$("li.LTC").append("<h1>"+key+"</h1>");
-			$("li.LTC").append("<p>Alive: "+value.alive+"</p>");
-			$("li.LTC").append("<p>Hashrate: "+value.hashrate+"</p>");
-		});
+	$("li.LTC h1, li.LTC h2, li.LTC p, li.LTC br").remove();
+	$("li.LTC").append("<h1>Litecoin Mining</h1>");
+	$.getJSON("/proxy.php?url=http%253A%252F%252Fltc.ouranos.fr%252Findex.php%253Fpage%253Dapi%2526action%253Dgetdashboarddata%2526api_key%253D4cd138df7a81c1d6336326b67503433e3609edc3c190edd05720c848c4c84126%2526id%253D476%2526id=476", function(getdashboarddata) {
+		getdashboarddata = getdashboarddata.getdashboarddata;
+		$("li.LTC").append("<h1>"+getdashboarddata.data.pool.info.name+"</h1>");
+		$("li.LTC").append("<p>"+getdashboarddata.data.pool.workers+" workers</p><br />");
+
+		$("li.LTC").append("<h1>mathcoll</h1>");
+		$("li.LTC").append("<p>Hashrate: "+getdashboarddata.data.personal.hashrate+"</p>");
+		$("li.LTC").append("<p>Shares: "+getdashboarddata.data.personal.shares.valid+"</p>");
+		$("li.LTC").append("<p>Block Rewards: "+Math.round(getdashboarddata.data.personal.estimates.block*1000000)/1000000+" LTC</p>");
+		$("li.LTC").append("<p>Rewards: "+Math.round(getdashboarddata.data.personal.estimates.payout*1000000000)/1000000000+" LTC</p>");
+
+		//$.each(ltc.workers, function(key, value){
+		//	$("li.LTC").append("<h1>"+key+"</h1>");
+		//	$("li.LTC").append("<p>Alive: "+value.alive+" / Hashrate: "+value.hashrate+"<br /><br /></p>");
+		//});
 	});
 	$("li.LTC").append("<p class='updated-at'>"+displayTime()+"</p>");
 	setTimeout("LTC()", 2*60*1000);
@@ -199,7 +207,7 @@ function RunningProcess() {
 	$("li.RunningProcess").append("<h1>Running Process</h1>");
 	$.getJSON("http://app.internetcollaboratif.info/API/?action=getRunningProcess", function(getRunningProcess) {
 		$.each(getRunningProcess.getRunningProcess.process, function(key, value){
-			$("li.RunningProcess").append("<div style='font-size:.8em;clear: both;' title='proc="+value.proc+"'><span style='float:left'>"+value.name+"</span><span style='float:right'>"+value.pid+"</span></div>");
+			$("li.RunningProcess").append("<div style='font-size:.8em;clear: both;padding:.5em;' title='proc="+value.proc+"'><span style='float:left'>"+value.name+"</span><span style='float:right'>"+value.pid+"</span></div>");
 		});
 	});
 	$("li.RunningProcess").append("<p class='updated-at'>"+displayTime()+"</p>");
@@ -211,7 +219,7 @@ function secondstotime(secs) {
 	t.setSeconds(secs);
 	var s = t.toTimeString().substr(0,8);
 	if(secs > 86399) {
-	    s = Math.floor((t - Date.parse("1/1/70")) / 3600000) + s.substr(2);
+		s = Math.floor((t - Date.parse("1/1/70")) / 3600000) + s.substr(2);
 	}
 	return s;
 }
