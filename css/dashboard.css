@@ -140,13 +140,13 @@ div.gridster ul li:nth-child(10) {
 }
 
 p.dayOfWeeks {
-	font-size: 14px;
+	font-size: 10px;
 	text-align: center;
 	font-family: monospace;
 }
 
 p.dayOfWeeks span {
-	width: 29px;
+	width: 32px;
 	display: inline-block;
 }
 
@@ -1650,7 +1650,7 @@ h1 {
 h2 {
 	text-transform: uppercase;
 	margin-bottom: 5px;
-	font-size: 16px;
+	font-size: .8em;
 	font-weight: 700;
 	color: white;
 }
@@ -1760,7 +1760,7 @@ h4.value {
 }
 
 .updated-at {
-	font-size: 12px;
+	font-size: .8em;
 	position: absolute;
 	bottom: 12px;
 	left: 0;
