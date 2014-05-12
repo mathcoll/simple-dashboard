@@ -6,15 +6,18 @@ require(dirname(__FILE__) . "/includes/config.php");
 require(dirname(__FILE__) . "/includes/db.php");
 require(dirname(__FILE__) . "/includes/trigger.php");
 use Gregwar\GnuPlot\GnuPlot;
+global $vars;
 
 function output($data, $object=null, $actionSettings=null) {
+	global $vars;
 	if ( $_GET["debug"] == "true" ) {
 		if ( isset($actionSettings) ) {
 			$data['name']			= $actionSettings['name'];
 			$data['description']	= $actionSettings['description'];
 			array_push($actionSettings['parameters'], "action", "debug");
-			$data['parameters']		= $actionSettings['parameters'];
+			$data['required-parameters']		= $actionSettings['parameters'];
 		}
+		//$data['required-parameters'] = $vars['actions'][$vars['action']]["parameters"];
 		print_r($data);
 	} else {
 		echo json_encode($data, $object);
@@ -63,13 +66,22 @@ $vars['trigger']			= new trigger();
 
 $vars['action']				= @$_GET["action"];
 $functionName				= "ACTION_".$vars['action'];
+$vars['channel']			= @isset($_POST["channel"])?$_POST["channel"]:@isset($_GET["channel"])?$_GET["channel"]:"channel";
 $vars['data_type_id']		= @isset($_POST["data_type_id"])?intval($_POST["data_type_id"]):"";
+$vars['device']				= @isset($_POST["device"])?$_POST["device"]:@isset($_GET["device"])?$_GET["device"]:"device";
 $vars['enable']				= @isset($_POST["enable"])?intval($_POST["enable"]):"";
 $vars['event']				= @isset($_POST["event"])?$_POST["event"]:"";
 $vars['exitOnAlert']		= @isset($_POST["exitOnAlert"])?intval($_POST["exitOnAlert"]):"";
 $vars['filter_enable']		= @isset($_POST["filter_enable"])?@$_POST["filter_enable"]:@$_GET["filter_enable"];
 $vars['formatdate']			= @isset($_POST["formatdate"])?$_POST["formatdate"]:@isset($_GET["formatdate"])?$_GET["formatdate"]:"unixepoch";
-$vars['flow_id']			= @isset($_GET['flow_id'])?$_GET['flow_id']:null;
+//print "P".$_POST["flow_id"];
+//print "G".$_GET["flow_id"];
+$vars['flow_id']			= @isset($_POST["flow_id"])?$_POST["flow_id"]:null;
+if ( !isset($vars['flow_id']) ) {
+	$vars['flow_id'] = @isset($_GET['flow_id'])?$_GET['flow_id']:null;
+}
+//print "V".$vars['flow_id'];
+
 $vars['height']				= @isset($_POST["height"])?$_POST["height"]:"";
 $vars['ipv4']				= @isset($_POST["ipv4"])?$_POST["ipv4"]:@$_GET["ipv4"];
 $vars['ipv6']				= @isset($_POST["ipv6"])?$_POST["ipv6"]:@$_GET["ipv6"];
@@ -82,6 +94,7 @@ $vars['minthreshold']		= @isset($_POST["minthreshold"])?$_POST["minthreshold"]:@
 $vars['mqtt_topic']			= @isset($_POST["mqtt_topic"])?$_POST["mqtt_topic"]:"";
 $vars['name']				= @isset($_POST["name"])?$_POST["name"]:@$_GET["name"];
 $vars['password']			= @isset($_POST["password"])?$_POST["password"]:"";
+$vars['period']				= @isset($_POST["period"])?$_POST["period"]:@isset($_GET["period"])?$_GET["period"]:"@daily";
 $vars['process']			= @isset($_POST["process"])?$_POST["process"]:@$_GET["process"];
 $vars['position']			= @isset($_POST["position"])?$_POST["position"]:@$_GET["position"];
 $vars['publish']			= @isset($_GET["publish"])?boolval($_GET["publish"]):false;
@@ -96,6 +109,8 @@ $vars['unit_id']			= @isset($_POST["unit_id"])?intval($_POST["unit_id"]):"";
 $vars['username']			= @isset($_POST["username"])?$_POST["username"]:"";
 $vars['value']				= @isset($_POST["value"])?$_POST["value"]:"";
 $vars['width']				= @isset($_POST["width"])?$_POST["width"]:"";
+
+//print_r($vars);
 
 $vars['actions'] = array(
 		"help" => array(
@@ -170,8 +185,8 @@ $vars['actions'] = array(
 		),
 		"getAverage" => array(
 				"name"			=> "getAverage",
-				"description"	=> "",
-				"parameters"	=> array(),
+				"description"	=> "Get average data for a period",
+				"parameters"	=> array("flow_id", "since", "period"),
 		),
 		"getMin" => array(
 				"name"			=> "getMin",
@@ -207,6 +222,11 @@ $vars['actions'] = array(
 				"name"			=> "getCPU",
 				"description"	=> "get current CPU Usage using 'ps aux'",
 				"parameters"	=> array(),
+		),
+		"ACTION_publish" => array(
+				"name"			=> "ACTION_publish",
+				"description"	=> "",
+				"parameters"	=> array("device", "channel", "value"),
 		),
 		"getVOC" => array(
 				"name"			=> "getVOC",
@@ -288,13 +308,14 @@ if ( isset($vars['since']) ) {
 }
 
 if( !$vars['action'] ) {
-	$data = array("status" => "error", "message" => "Mandatory input (action) missing.");
+	$data = array("status" => "error", "message" => "Action is missing.");
 	output($data, JSON_FORCE_OBJECT);
 	ACTION_help($actionSettings, $vars);
 	exit();
 } else {
 	$actionSettings = @$vars['actions'][$vars['action']];
 	//print_r($actionSettings);
+	//print_r($vars);
 	if( !function_exists($functionName) ) {
 		$data = array("status" => "error", "message" => sprintf("Action '%s' is not defined.", $vars['action']));
 		output($data, JSON_FORCE_OBJECT);
@@ -339,12 +360,34 @@ function ACTION_test($actionSettings, $vars) {
 	$sensor = new sensor_test($action, $flow_id);
 	$data = $sensor->getCurrent();
 
+	$d				= array();
+	$d["dtepoch"]	= $vars['timestamp'];
+	$d["value"]		= $data[$action]["value"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish(time(), $data[$action]["value"], "testDevice", "testChannel") ) {
+		if ( $vars['mqtt']->publish(time(), json_encode($d), "testDevice", "testChannel") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
 		}
+	}
+	output($data, JSON_FORCE_OBJECT, $actionSettings);
+	exit();
+}
+
+/**
+ * @param:
+ * @return:
+ */
+function ACTION_publish($actionSettings, $vars) { 
+	$d				= array();
+	$d["dtepoch"]	= time();
+	$d["value"]		= $vars["value"];
+
+	if ( $vars['mqtt']->publish($d["dtepoch"], json_encode($d), $vars['device'], $vars['channel']) ) {
+		$data["published"] = true;
+	} else {
+		$data["published"] = "error";
 	}
 	output($data, JSON_FORCE_OBJECT, $actionSettings);
 	exit();
@@ -451,8 +494,12 @@ function ACTION_getRunningProcess($actionSettings, $vars) {
 	$sensor = new sensor_process($action, $flow_id);
 	$data = $sensor->getCurrent($vars['process']);
 
+	$d				= array();
+	$d["dtepoch"]	= $vars['timestamp'];
+	$d["value"]		= $data[$action]["value"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish(time(), $data[$action]["value"], "guruplug", "runningProcess") ) {
+		if ( $vars['mqtt']->publish(time(), json_encode($d), "guruplug", "runningProcess") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -596,7 +643,7 @@ function ACTION_getImage($actionSettings, $vars) {
  * @return:
  */
 function ACTION_getAverage($actionSettings, $vars) { ## only for integer
-	$data = $vars['db']->getAvg($vars['since'], $vars['sinceTimestamp'], $vars['flow_id']);
+	$data = $vars['db']->getAvg($vars['since'], $vars['sinceTimestamp'], $vars['period'], $vars['flow_id']);
 	output($data, null, $actionSettings);
 	exit();
 }
@@ -633,8 +680,12 @@ function ACTION_getEatingCPU($actionSettings, $vars) {
 	$data = $sensor->getCurrent($vars['limit']);
 	$timestamp = time();
 
+	$d				= array();
+	$d["dtepoch"]	= $timestamp;
+	$d["value"]		= $data[$action]["value"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($timestamp, $data[$action]["value"], "guruplug", "cpu") ) {
+		if ( $vars['mqtt']->publish($timestamp, json_encode($d), "guruplug", "cpu") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -661,8 +712,12 @@ function ACTION_getFreeSpace($actionSettings, $vars) {
 	$data = $sensor->getCurrent();
 	$timestamp = time();
 
+	$d				= array();
+	$d["dtepoch"]	= $timestamp;
+	$d["value"]		= $data[$action]["value"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($timestamp, $data[$action]["value"], "guruplug", "freespace") ) {
+		if ( $vars['mqtt']->publish($timestamp, json_encode($d), "guruplug", "freespace") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -709,8 +764,12 @@ function ACTION_memoryUsage($actionSettings, $vars) {
 	$data = $sensor->getCurrent("mem");
 	$timestamp = time();
 
+	$d				= array();
+	$d["dtepoch"]	= $timestamp;
+	$d["value"]		= $data[$action]["value"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($timestamp, $data[$action]["value"], "guruplug", "memory_usage") ) {
+		if ( $vars['mqtt']->publish($timestamp, json_encode($d), "guruplug", "memory_usage") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -737,8 +796,12 @@ function ACTION_getCPU($actionSettings, $vars) {
 	$data = $sensor->getCurrent("cpu");
 	$timestamp = time();
 
+	$d				= array();
+	$d["dtepoch"]	= $timestamp;
+	$d["value"]		= $data[$action]["value"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($timestamp, $data[$action]["value"], "guruplug", "cpu_usage") ) {
+		if ( $vars['mqtt']->publish($timestamp, json_encode($d), "guruplug", "cpu_usage") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -764,9 +827,13 @@ function ACTION_getVOC($actionSettings, $vars) {
 	$sensor = new sensor_yoctovoc($action, $vars['flow_id']);
 	$data = $sensor->getCurrent();
 	$vars['timestamp'] = time();
+	
+	$d				= array();
+	$d["dtepoch"]	= $vars['timestamp'];
+	$d["value"]		= $data[$action]["currentValue"];
 
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($vars['timestamp'], $data[$action]["currentValue"], "yoctovoc", "VOC") ) {
+		if ( $vars['mqtt']->publish($vars['timestamp'], json_encode($d), "yoctovoc", "voc") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -793,8 +860,12 @@ function ACTION_getVirtualHub($actionSettings, $vars) {
 	$data = $sensor->getCurrent(isset($_GET['serial'])?$_GET['serial']:"");
 	$vars['timestamp'] = time();
 
+	$d				= array();
+	$d["dtepoch"]	= $vars['timestamp'];
+	$d["value"]		= "value";
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($vars['timestamp'], "value", "virtualhub", "name") ) {
+		if ( $vars['mqtt']->publish($vars['timestamp'], json_encode($d), "virtualhub", "name") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -821,8 +892,12 @@ function ACTION_getTemp($actionSettings, $vars) {
 	$data = $sensor->getCurrent();
 	$vars['timestamp'] = $data[$action]["ts"];
 
+	$d				= array();
+	$d["dtepoch"]	= $vars['timestamp'];
+	$d["value"]		= $data[$action]["temp"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($vars['timestamp'], $data[$action]["temp"], "HTTP-get", "temperature") ) {
+		if ( $vars['mqtt']->publish($vars['timestamp'], json_encode($d), "yahoo", "temperature") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
@@ -844,26 +919,47 @@ function ACTION_getTemp($actionSettings, $vars) {
 function ACTION_getFreebox($actionSettings, $vars) {
 	require(dirname(__FILE__) . "/includes/sensor_freebox.php");
 	$action = $vars['action'];
-	$vars['flow_id'] = array(10,11,12,13,14,15, 16, 17, 18, 19);
+	$vars['flow_id'] = array(10, 11, 12, 13, 14, 15, 16, 17, 18, 19);
 	$sensor = new sensor_freebox($action, $vars['flow_id']);
 	$data = $sensor->getCurrent(isset($_GET['serial'])?$_GET['serial']:"");
 	$vars['timestamp'] = time();
+	$errorCount = 0;
 
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($vars['timestamp'], $data[$action]["upfec"], "Freebox", "FECup") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downfec"], "Freebox", "FECdown") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["uphec"], "Freebox", "HECup") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downhec"], "Freebox", "HECdown") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["upcrc"], "Freebox", "CRCup") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downcrc"], "Freebox", "CRCdown") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downrate"], "Freebox", "ATMup") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["uprate"], "Freebox", "ATMdown") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["upmargin"], "Freebox", "marginUp") &&
-		$vars['mqtt']->publish($vars['timestamp'], $data[$action]["downmargin"], "Freebox", "marginDown") ) {
-			$data["published"] = true;
-		} else {
-			$data["published"] = "error";
-		}
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["upfec"])), "Freebox", "FECup");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["downfec"])), "Freebox", "FECdown");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["uphec"])), "Freebox", "HECup");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["downhec"])), "Freebox", "HECdown");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["upcrc"])), "Freebox", "CRCup");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["downcrc"])), "Freebox", "CRCdown");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["downrate"])), "Freebox", "ATMup");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["uprate"])), "Freebox", "ATMdown");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["upmargin"])), "Freebox", "marginUp");
+	} else { $errorCount++; }
+	if ( $vars['publish'] == true ) {
+		$vars['mqtt']->publish($vars['timestamp'], json_encode(array("dtepoch" => $vars['timestamp'], "value" => $data[$action]["downmargin"])), "Freebox", "marginDown");
+	} else { $errorCount++; }
+	
+	if ( $errorCount == 0 ) {
+		$data["published"] = true;
+	} else {
+		$data["published"] = sprintf("%d error(s)", $errorCount);
 	}
 
 	if ( $vars['save'] == true ) {
@@ -895,8 +991,13 @@ function ACTION_checkNetwork($actionSettings, $vars) {
 	$data = $sensor->getCurrent($vars['ipv4']);
 	$vars['timestamp'] = time();
 
+	$d				= array();
+	$d["dtepoch"]	= $vars['timestamp'];
+	$d["ipv4"]		= $vars['ipv4'];
+	$d["value"]		= $data[$action]["value"];
+
 	if ( $vars['publish'] == true ) {
-		if ( $vars['mqtt']->publish($vars['timestamp'], $vars['ipv4'].":".$data[$action]["value"], "guruplug", "checkNetwork") ) {
+		if ( $vars['mqtt']->publish($vars['timestamp'], json_encode($d), "guruplug", "checkNetwork") ) {
 			$data["published"] = true;
 		} else {
 			$data["published"] = "error";
