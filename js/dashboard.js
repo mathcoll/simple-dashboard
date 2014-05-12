@@ -97,20 +97,25 @@ function guruplugRootAccess() {
 		var rootAccess = "";
 		var sum = 0;
 		var dayOfWeeks = "";
+		var avg = 0;
+		var n = 0;
 		$.each(getFailedRoot, function(key, value){
 			rootAccess += getFailedRoot[key][1] + ",";
 			sum += parseInt(getFailedRoot[key][1]);
 			var d = new Date(parseInt(getFailedRoot[key][0]));
 			dayOfWeeks += "<span title='"+s_days[d.getDay()]+" : "+getFailedRoot[key][1]+"'>"+xs_days[d.getDay()]+"</span>";
+			n++;
 		});
 		$("li.guruplugRootAccess").append("<span class='bar'>"+rootAccess.substring(0, (rootAccess.length)-1)+"</span></h3>");
 
+		avg = Math.round( sum / n );
 		$("li.guruplugRootAccess").append("<p class='dayOfWeeks'>"+dayOfWeeks+"</p>");
-		$("li.guruplugRootAccess").append("<h3>Sum: "+sum+" (in the last 20 days)</h3>");
-		$("li.guruplugRootAccess").append("<p class='updated-at'></p>");
+		$("li.guruplugRootAccess").append("<h3>Sum: "+sum+" (in the last 20 days)</h2>");
+		$("li.guruplugRootAccess").append("<h3>Avg: "+avg+"</h2>");
+		$("li.guruplugRootAccess").append("<p class='updated-at'>"+displayTime(getFailedRoot[0][0]/1000)+"</p>");
 		$("li.guruplugRootAccess span.bar").peity("bar", {
 			width: 2*(dim-margin),
-			height: dim-100,
+			height: dim-130,
 			spacing: margin,
 			colours: ["#cecece"],
 			strokeColour: "#cecece",
