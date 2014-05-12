@@ -58,7 +58,7 @@ class db {
 	}
 
 	public function setData($timestamp=null, $value=null, $flow_id=null) {
-		if ( $timestamp!=NULL && $value!=NULL && $flow_id!=NULL ) {
+		if ( $timestamp!=null && $value!=null && $flow_id!=null ) {
 			$q = sprintf("INSERT INTO data (timestamp, value, flow_id) VALUES (%d, '%s', %d)", $timestamp, $value, $flow_id);
 			//print $q;
 			if ( $this->dbh->exec($q) ) {
@@ -110,12 +110,35 @@ class db {
 		return $this->data;
 	}
 
-	public function getAvg($since=null, $sinceTimestamp=null, $flow_id=null) {
+	public function getAvg($since=null, $sinceTimestamp=null, $period=null, $flow_id=null) {
 		if ( !$flow_id || !$sinceTimestamp || !$since ) {
 			$this->data["getAvg"] = array("status" => "error", "message" => "Mandatory input data missing.");
 		} else {
+			
+			if( isset($period) ) {
+				// @hourly, @daily, @weekly, @monthly, @yearly
+				switch($period) {
+					case "@hourly":
+						$period = "%H"; break;
+					case "@weekly":
+						$period = "%W"; break;
+					case "@monthly":
+						$period = "%m"; break;
+					case "@yearly":
+						$period = "%Y"; break;
+					case "@daily":
+					default:
+						$period = "%j"; break;
+				}
+			} 
 			//$q = sprintf("SELECT timestamp, avg(cast(value as integer)) as value FROM data WHERE flow_id=%d AND timestamp >= %d ORDER BY timestamp DESC", $flow_id, $sinceTimestamp);
-			$q = sprintf("SELECT strftime('%%d-%%m-%%Y', datetime(timestamp, 'unixepoch', 'localtime')) as date, timestamp, strftime('%%j', datetime(timestamp, 'unixepoch', 'localtime')) as j, avg(value) as value FROM data WHERE flow_id = %d AND timestamp >= %d GROUP BY j ORDER BY timestamp ASC", $flow_id, $sinceTimestamp);
+			$q = sprintf("SELECT strftime(
+					'%%d-%%m-%%Y',
+					datetime(timestamp, 'unixepoch', 'localtime')) as date,
+					timestamp,
+					strftime('%s', datetime(timestamp, 'unixepoch', 'localtime')) as period,
+					avg(value) as value
+					FROM data WHERE flow_id = %d AND timestamp >= %d GROUP BY period ORDER BY timestamp ASC", $period, $flow_id, $sinceTimestamp);
 			//print $q;
 			foreach ($this->dbh->query($q) as $row) {
 				$this->data["getAvg"][]=array($row['timestamp']."000", $row['value']);
